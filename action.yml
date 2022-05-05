@@ -1,6 +1,8 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Automatic Versioning'
+description: |
+  This action provides the ability to automatically bump the version number inside the package.json file of a Javascript project
+  and update a CHANGELOG.md file
+author: 'mx51'
 inputs:
   milliseconds: # change this
     required: true
