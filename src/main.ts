@@ -1,20 +1,26 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {wait} from './wait'
+import { wait } from './wait'
 import { join } from 'path';
-import { readdirSync, readFileSync} from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
 
 const MAJOR_RE = /#major|\[\s?major\s?\]/gi
 const MINOR_RE = /#minor|\[\s?minor\s?\]/gi
 const PATCH_RE = /#patch|\[\s?patch\s?\]/gi
 
-enum ChangeTypes {
+enum ChangeType {
   MAJOR,
   MINOR,
   PATCH,
   UNKNOWN
 }
+
+enum SupportedEvent {
+  PUSH = "push",
+  PR = "pull_request"
+}
+
 /**
  * Retrieves the package version from the package.json file
  * 
@@ -22,7 +28,7 @@ enum ChangeTypes {
  * @returns The current package version
  */
 function getPackageVersion(projectDir: string): string {
-  const packageJsonPath = join(projectDir,'package.json')
+  const packageJsonPath = join(projectDir, 'package.json')
   try {
     let jsonData = readFileSync(packageJsonPath, 'utf8')
     return JSON.parse(jsonData).version
@@ -41,7 +47,7 @@ function isSemVer(version: string): boolean {
   return /^[0-9]+.[0-9]+.[0-9]+/.test(version);
 }
 
-function detectChangeType(){
+function detectChangeType() {
 
 }
 
@@ -58,21 +64,21 @@ function detectChangeType(){
 //   return ChangeTypes.UNKNOWN;
 // }
 
-function getChangeTypeForString(str: string): ChangeTypes {
+function getChangeTypeFromString(str: string): ChangeType {
   if (typeof str !== "string") {
     core.warning(`called getChangeTypeForString with non string: ${str}`)
-    return ChangeTypes.UNKNOWN
+    return ChangeType.UNKNOWN
   }
-  
-  if(MAJOR_RE.test(str)) return ChangeTypes.MAJOR
-  if(MINOR_RE.test(str)) return ChangeTypes.MINOR
-  if(PATCH_RE.test(str)) return ChangeTypes.PATCH
-  
-  return ChangeTypes.UNKNOWN
+
+  if (MAJOR_RE.test(str)) return ChangeType.MAJOR
+  if (MINOR_RE.test(str)) return ChangeType.MINOR
+  if (PATCH_RE.test(str)) return ChangeType.PATCH
+
+  return ChangeType.UNKNOWN
 }
 
-function listFilesInDir(path: string){
-  console.log("Listing files in directory: ",path)
+function listFilesInDir(path: string) {
+  console.log("Listing files in directory: ", path)
   const files = readdirSync(path)
   for (const file of files) {
     console.log(file)
@@ -81,26 +87,39 @@ function listFilesInDir(path: string){
 
 async function run(): Promise<void> {
   try {
-    
+
     const githubToken = core.getInput('github_token');
     const projectDir = core.getInput('project_dir');
 
     const client = github.getOctokit(githubToken);
     const context: Context = github.context;
+    const eventName = context.eventName;
+    const supportedEvents = Object.values<string>(SupportedEvent);
 
+    if (!supportedEvents.includes(eventName)) {
+      throw new Error(`This Github Action does not support '${eventName}' events`)
+    }
+
+    console.log("EVENT NAME", eventName)
+
+    if (eventName == SupportedEvent.PR) {
+      const title = context.payload.pull_request?.title;
+      const changeType = getChangeTypeFromString(title);
+
+    }
 
     console.log(client)
     console.log(context)
 
     const version = getPackageVersion(projectDir)
 
-    if(!isSemVer(version)) {
+    if (!isSemVer(version)) {
       throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
     }
 
     core.setOutput('current_version', version)
-    
-    
+
+
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
 

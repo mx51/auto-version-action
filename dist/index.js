@@ -42,13 +42,18 @@ const fs_1 = __nccwpck_require__(5747);
 const MAJOR_RE = /#major|\[\s?major\s?\]/gi;
 const MINOR_RE = /#minor|\[\s?minor\s?\]/gi;
 const PATCH_RE = /#patch|\[\s?patch\s?\]/gi;
-var ChangeTypes;
-(function (ChangeTypes) {
-    ChangeTypes[ChangeTypes["MAJOR"] = 0] = "MAJOR";
-    ChangeTypes[ChangeTypes["MINOR"] = 1] = "MINOR";
-    ChangeTypes[ChangeTypes["PATCH"] = 2] = "PATCH";
-    ChangeTypes[ChangeTypes["UNKNOWN"] = 3] = "UNKNOWN";
-})(ChangeTypes || (ChangeTypes = {}));
+var ChangeType;
+(function (ChangeType) {
+    ChangeType[ChangeType["MAJOR"] = 0] = "MAJOR";
+    ChangeType[ChangeType["MINOR"] = 1] = "MINOR";
+    ChangeType[ChangeType["PATCH"] = 2] = "PATCH";
+    ChangeType[ChangeType["UNKNOWN"] = 3] = "UNKNOWN";
+})(ChangeType || (ChangeType = {}));
+var SupportedEvent;
+(function (SupportedEvent) {
+    SupportedEvent["PUSH"] = "push";
+    SupportedEvent["PR"] = "pull_request";
+})(SupportedEvent || (SupportedEvent = {}));
 /**
  * Retrieves the package version from the package.json file
  *
@@ -87,18 +92,18 @@ function detectChangeType() {
 //   }
 //   return ChangeTypes.UNKNOWN;
 // }
-function getChangeTypeForString(str) {
+function getChangeTypeFromString(str) {
     if (typeof str !== "string") {
         core.warning(`called getChangeTypeForString with non string: ${str}`);
-        return ChangeTypes.UNKNOWN;
+        return ChangeType.UNKNOWN;
     }
     if (MAJOR_RE.test(str))
-        return ChangeTypes.MAJOR;
+        return ChangeType.MAJOR;
     if (MINOR_RE.test(str))
-        return ChangeTypes.MINOR;
+        return ChangeType.MINOR;
     if (PATCH_RE.test(str))
-        return ChangeTypes.PATCH;
-    return ChangeTypes.UNKNOWN;
+        return ChangeType.PATCH;
+    return ChangeType.UNKNOWN;
 }
 function listFilesInDir(path) {
     console.log("Listing files in directory: ", path);
@@ -108,12 +113,23 @@ function listFilesInDir(path) {
     }
 }
 function run() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const githubToken = core.getInput('github_token');
             const projectDir = core.getInput('project_dir');
             const client = github.getOctokit(githubToken);
             const context = github.context;
+            const eventName = context.eventName;
+            const supportedEvents = Object.values(SupportedEvent);
+            if (!supportedEvents.includes(eventName)) {
+                throw new Error(`This Github Action does not support '${eventName}' events`);
+            }
+            console.log("EVENT NAME", eventName);
+            if (eventName == SupportedEvent.PR) {
+                const title = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.title;
+                const changeType = getChangeTypeFromString(title);
+            }
             console.log(client);
             console.log(context);
             const version = getPackageVersion(projectDir);
