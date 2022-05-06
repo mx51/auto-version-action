@@ -37,11 +37,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
 const path_1 = __nccwpck_require__(622);
+const fs_1 = __nccwpck_require__(747);
 /**
  * Retrieves the package version from the package.json file
  */
 function getVersion(projectDir) {
     try {
+        listFilesInDir(projectDir);
         const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
         const jsonData = require(packageJsonPath);
         console.log(jsonData);
@@ -51,12 +53,20 @@ function getVersion(projectDir) {
         throw new Error("File does not exist");
     }
 }
+function listFilesInDir(path) {
+    console.log("Listing files in directory: ", path);
+    const files = (0, fs_1.readdirSync)(path);
+    for (const file of files) {
+        console.log(file);
+    }
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const projectDir = core.getInput('projectDir');
             console.log("HELLo WORLD");
             console.log("Current directory:", __dirname);
+            listFilesInDir(__dirname);
             getVersion(projectDir);
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true

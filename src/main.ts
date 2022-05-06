@@ -2,12 +2,14 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {wait} from './wait'
 import { join } from 'path';
+import { readdirSync } from 'fs';
 
 /**
  * Retrieves the package version from the package.json file
  */
 function getVersion(projectDir: string){
   try {
+    listFilesInDir(projectDir);
     const packageJsonPath = join(projectDir,'package.json')
     const jsonData: any = require(packageJsonPath)
     console.log(jsonData)
@@ -19,11 +21,21 @@ function getVersion(projectDir: string){
 
 }
 
+function listFilesInDir(path: string){
+  console.log("Listing files in directory: ",path)
+  const files = readdirSync(path)
+  for (const file of files) {
+    console.log(file)
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const projectDir = core.getInput('projectDir')
     console.log("HELLo WORLD")
     console.log("Current directory:", __dirname);
+    listFilesInDir(__dirname);
+
     getVersion(projectDir)
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
