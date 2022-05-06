@@ -36,7 +36,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
-const path_1 = __nccwpck_require__(622);
 const fs_1 = __nccwpck_require__(747);
 /**
  * Retrieves the package version from the package.json file
@@ -44,9 +43,9 @@ const fs_1 = __nccwpck_require__(747);
 function getVersion(projectDir) {
     try {
         listFilesInDir(projectDir);
-        const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
-        console.log({ packageJsonPath });
-        const jsonData = require(packageJsonPath);
+        // const packageJsonPath = join(projectDir,'package.json')
+        // console.log({packageJsonPath})
+        const jsonData = __nccwpck_require__(358);
         console.log(jsonData);
         console.log(jsonData.version);
     }
@@ -1637,6 +1636,14 @@ if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
   debug = function() {};
 }
 exports.debug = debug; // for test
+
+
+/***/ }),
+
+/***/ 358:
+/***/ ((module) => {
+
+module.exports = eval("require")("./package.json");
 
 
 /***/ }),

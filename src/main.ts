@@ -10,9 +10,9 @@ import { readdirSync } from 'fs';
 function getVersion(projectDir: string){
   try {
     listFilesInDir(projectDir);
-    const packageJsonPath = join(projectDir,'package.json')
-    console.log({packageJsonPath})
-    const jsonData: any = require(packageJsonPath)
+    // const packageJsonPath = join(projectDir,'package.json')
+    // console.log({packageJsonPath})
+    const jsonData: any = require('./package.json')
     console.log(jsonData)
     console.log(jsonData.version)
     
