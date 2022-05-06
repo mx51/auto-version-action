@@ -3,7 +3,18 @@ import * as github from '@actions/github'
 import {wait} from './wait'
 import { join } from 'path';
 import { readdirSync, readFileSync} from 'fs';
+import { Context } from '@actions/github/lib/context';
 
+const MAJOR_RE = /#major|\[\s?major\s?\]/gi
+const MINOR_RE = /#minor|\[\s?minor\s?\]/gi
+const PATCH_RE = /#patch|\[\s?patch\s?\]/gi
+
+enum ChangeTypes {
+  MAJOR,
+  MINOR,
+  PATCH,
+  UNKNOWN
+}
 /**
  * Retrieves the package version from the package.json file
  * 
@@ -34,6 +45,32 @@ function detectChangeType(){
 
 }
 
+// async function getChangeTypeForContext(context: Context) {
+//   const titleTag = getChangeTypeForString(context.payload.pull_request?.body);
+//   if (titleTag !== ChangeTypes.UNKNOWN) {
+//     return titleTag;
+//   }
+//   const bodyTag = getChangeTypeForString(context.payload.pull_request.body);
+//   if (bodyTag !== ChangeTypes.UNKNOWN) {
+//     return bodyTag;
+//   }
+
+//   return ChangeTypes.UNKNOWN;
+// }
+
+function getChangeTypeForString(str: string): ChangeTypes {
+  if (typeof str !== "string") {
+    core.warning(`called getChangeTypeForString with non string: ${str}`)
+    return ChangeTypes.UNKNOWN
+  }
+  
+  if(MAJOR_RE.test(str)) return ChangeTypes.MAJOR
+  if(MINOR_RE.test(str)) return ChangeTypes.MINOR
+  if(PATCH_RE.test(str)) return ChangeTypes.PATCH
+  
+  return ChangeTypes.UNKNOWN
+}
+
 function listFilesInDir(path: string){
   console.log("Listing files in directory: ",path)
   const files = readdirSync(path)
@@ -44,7 +81,16 @@ function listFilesInDir(path: string){
 
 async function run(): Promise<void> {
   try {
-    const projectDir = core.getInput('projectDir')
+    
+    const githubToken = core.getInput('github_token');
+    const projectDir = core.getInput('project_dir');
+
+    const client = github.getOctokit(githubToken);
+    const context: Context = github.context;
+
+
+    console.log(client)
+    console.log(context)
 
     const version = getPackageVersion(projectDir)
 

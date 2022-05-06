@@ -4,10 +4,13 @@ description: |
   and update a CHANGELOG.md file
 author: 'mx51'
 inputs:
-  projectDir: # change this
+  github_token: # change this
     required: true
     description: 'input description here'
-    default: 'default value if applicable'
+  project_dir: # change this
+    required: false
+    description: 'input description here'
+    default: ./
 runs:
   using: 'node16'
   main: 'dist/index.js'
