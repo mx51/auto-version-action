@@ -36,14 +36,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const path_1 = __nccwpck_require__(622);
 /**
  * Retrieves the package version from the package.json file
  */
-function getVersion(path) {
+function getVersion() {
     try {
-        const packageJson = require(`${path}/package.json`);
-        console.log(packageJson);
-        console.log(packageJson.version);
+        const packageJsonPath = (0, path_1.join)(__dirname, 'package.json');
+        const jsonData = require(packageJsonPath);
+        console.log(jsonData);
+        console.log(jsonData.version);
     }
     catch (error) {
         throw new Error("File does not exist");
@@ -54,6 +56,7 @@ function run() {
         try {
             console.log("HELLo WORLD");
             console.log("Current directory:", __dirname);
+            getVersion();
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
             // core.debug(new Date().toTimeString())
