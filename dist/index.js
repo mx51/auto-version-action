@@ -38,24 +38,32 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
 const path_1 = __nccwpck_require__(622);
 const fs_1 = __nccwpck_require__(747);
-// const { promises: fs } = require('fs')
 /**
  * Retrieves the package version from the package.json file
+ *
+ * @param projectDir
+ * @returns The current package version
  */
-function getVersion(projectDir) {
+function getPackageVersion(projectDir) {
+    const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
     try {
-        listFilesInDir(projectDir);
-        const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
         let jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
-        const version = JSON.parse(jsonData).version;
-        // console.log({packageJsonPath})
-        // const jsonData: any = require('./package.json')
-        console.log({ version });
-        // console.log(jsonData.version)
+        return JSON.parse(jsonData).version;
     }
     catch (error) {
-        throw new Error("File does not exist");
+        throw new Error(`Failed to read file: ${packageJsonPath}`);
     }
+}
+/**
+ * Check the version description follows Semantic Versioning format
+ *
+ * @param version A version description to be checked
+ * @returns
+ */
+function isSemVer(version) {
+    return /^[0-9]+.[0-9]+.[0-9]+/.test(version);
+}
+function detectChangeType() {
 }
 function listFilesInDir(path) {
     console.log("Listing files in directory: ", path);
@@ -68,10 +76,11 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const projectDir = core.getInput('projectDir');
-            console.log("HELLo WORLD");
-            console.log("Current directory:", __dirname);
-            listFilesInDir(__dirname);
-            getVersion(projectDir);
+            const version = getPackageVersion(projectDir);
+            if (!isSemVer(version)) {
+                throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`);
+            }
+            core.setOutput('current_version', version);
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
             // core.debug(new Date().toTimeString())

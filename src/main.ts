@@ -2,26 +2,35 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {wait} from './wait'
 import { join } from 'path';
-import { readdirSync, readFile, readFileSync} from 'fs';
-// const { promises: fs } = require('fs')
+import { readdirSync, readFileSync} from 'fs';
 
 /**
  * Retrieves the package version from the package.json file
+ * 
+ * @param projectDir 
+ * @returns The current package version
  */
-function getVersion(projectDir: string){
+function getPackageVersion(projectDir: string): string {
+  const packageJsonPath = join(projectDir,'package.json')
   try {
-    listFilesInDir(projectDir);
-    const packageJsonPath = join(projectDir,'package.json')
     let jsonData = readFileSync(packageJsonPath, 'utf8')
-    const version = JSON.parse(jsonData).version
-    // console.log({packageJsonPath})
-    // const jsonData: any = require('./package.json')
-    console.log({version})
-    // console.log(jsonData.version)
-    
+    return JSON.parse(jsonData).version
   } catch (error) {
-    throw new Error("File does not exist")
+    throw new Error(`Failed to read file: ${packageJsonPath}`)
   }
+}
+
+/**
+ * Check the version description follows Semantic Versioning format
+ * 
+ * @param version A version description to be checked
+ * @returns 
+ */
+function isSemVer(version: string): boolean {
+  return /^[0-9]+.[0-9]+.[0-9]+/.test(version);
+}
+
+function detectChangeType(){
 
 }
 
@@ -36,11 +45,16 @@ function listFilesInDir(path: string){
 async function run(): Promise<void> {
   try {
     const projectDir = core.getInput('projectDir')
-    console.log("HELLo WORLD")
-    console.log("Current directory:", __dirname);
-    listFilesInDir(__dirname);
 
-    getVersion(projectDir)
+    const version = getPackageVersion(projectDir)
+
+    if(!isSemVer(version)) {
+      throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
+    }
+
+    core.setOutput('current_version', version)
+    
+    
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
 
