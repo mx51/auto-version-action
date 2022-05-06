@@ -48,9 +48,10 @@ function getVersion(projectDir) {
             listFilesInDir(projectDir);
             const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
             let jsonData = yield fs.readFile(packageJsonPath, 'utf8');
+            const version = JSON.parse(jsonData).version;
             // console.log({packageJsonPath})
             // const jsonData: any = require('./package.json')
-            console.log(jsonData);
+            console.log({ version });
             // console.log(jsonData.version)
         }
         catch (error) {

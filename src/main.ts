@@ -13,9 +13,10 @@ async function getVersion(projectDir: string){
     listFilesInDir(projectDir);
     const packageJsonPath = join(projectDir,'package.json')
     let jsonData = await fs.readFile(packageJsonPath, 'utf8')
+    const version = JSON.parse(jsonData).version
     // console.log({packageJsonPath})
     // const jsonData: any = require('./package.json')
-    console.log(jsonData)
+    console.log({version})
     // console.log(jsonData.version)
     
   } catch (error) {
