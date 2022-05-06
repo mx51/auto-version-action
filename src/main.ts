@@ -97,16 +97,21 @@ async function run(): Promise<void> {
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);
 
-    // if (!supportedEvents.includes(eventName)) {
-    //   throw new Error(`This Github Action does not support '${eventName}' events`)
-    // }
+    if (!supportedEvents.includes(eventName)) throw new Error(`This Github Action does not support '${eventName}' events`)
 
     console.log("EVENT NAME", eventName)
 
     if (eventName == SupportedEvent.PR) {
       const title = context.payload.pull_request?.title;
       const changeType = getChangeTypeFromString(title);
+      if (changeType == ChangeType.UNKNOWN) throw new Error(`
+        PR title does not specify change type.
 
+        Select one of these change types: MAJOR, MINOR or PATCH
+        and prefix to title after a '#' or between square brackets '[]'
+
+        e.g. #MAJOR <PR description> or [MINOR] <PR description>
+      `)
     }
 
     console.log(client)
