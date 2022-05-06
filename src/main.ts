@@ -2,17 +2,17 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {wait} from './wait'
 import { join } from 'path';
-import { readdirSync, readFile } from 'fs';
-const { promises: fs } = require('fs')
+import { readdirSync, readFile, readFileSync} from 'fs';
+// const { promises: fs } = require('fs')
 
 /**
  * Retrieves the package version from the package.json file
  */
-async function getVersion(projectDir: string){
+function getVersion(projectDir: string){
   try {
     listFilesInDir(projectDir);
     const packageJsonPath = join(projectDir,'package.json')
-    let jsonData = await fs.readFile(packageJsonPath, 'utf8')
+    let jsonData = readFileSync(packageJsonPath, 'utf8')
     const version = JSON.parse(jsonData).version
     // console.log({packageJsonPath})
     // const jsonData: any = require('./package.json')

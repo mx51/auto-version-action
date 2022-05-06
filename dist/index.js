@@ -38,26 +38,24 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
 const path_1 = __nccwpck_require__(622);
 const fs_1 = __nccwpck_require__(747);
-const { promises: fs } = __nccwpck_require__(747);
+// const { promises: fs } = require('fs')
 /**
  * Retrieves the package version from the package.json file
  */
 function getVersion(projectDir) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            listFilesInDir(projectDir);
-            const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
-            let jsonData = yield fs.readFile(packageJsonPath, 'utf8');
-            const version = JSON.parse(jsonData).version;
-            // console.log({packageJsonPath})
-            // const jsonData: any = require('./package.json')
-            console.log({ version });
-            // console.log(jsonData.version)
-        }
-        catch (error) {
-            throw new Error("File does not exist");
-        }
-    });
+    try {
+        listFilesInDir(projectDir);
+        const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
+        let jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
+        const version = JSON.parse(jsonData).version;
+        // console.log({packageJsonPath})
+        // const jsonData: any = require('./package.json')
+        console.log({ version });
+        // console.log(jsonData.version)
+    }
+    catch (error) {
+        throw new Error("File does not exist");
+    }
 }
 function listFilesInDir(path) {
     console.log("Listing files in directory: ", path);
