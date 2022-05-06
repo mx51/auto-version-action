@@ -2,19 +2,21 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {wait} from './wait'
 import { join } from 'path';
-import { readdirSync } from 'fs';
+import { readdirSync, readFile } from 'fs';
+const { promises: fs } = require('fs')
 
 /**
  * Retrieves the package version from the package.json file
  */
-function getVersion(projectDir: string){
+async function getVersion(projectDir: string){
   try {
     listFilesInDir(projectDir);
-    // const packageJsonPath = join(projectDir,'package.json')
+    const packageJsonPath = join(projectDir,'package.json')
+    let jsonData = await fs.readFile(packageJsonPath, 'utf8')
     // console.log({packageJsonPath})
-    const jsonData: any = require('./package.json')
+    // const jsonData: any = require('./package.json')
     console.log(jsonData)
-    console.log(jsonData.version)
+    // console.log(jsonData.version)
     
   } catch (error) {
     throw new Error("File does not exist")

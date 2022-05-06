@@ -36,22 +36,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const path_1 = __nccwpck_require__(622);
 const fs_1 = __nccwpck_require__(747);
+const { promises: fs } = __nccwpck_require__(747);
 /**
  * Retrieves the package version from the package.json file
  */
 function getVersion(projectDir) {
-    try {
-        listFilesInDir(projectDir);
-        // const packageJsonPath = join(projectDir,'package.json')
-        // console.log({packageJsonPath})
-        const jsonData = __nccwpck_require__(358);
-        console.log(jsonData);
-        console.log(jsonData.version);
-    }
-    catch (error) {
-        throw new Error("File does not exist");
-    }
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            listFilesInDir(projectDir);
+            const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
+            let jsonData = yield fs.readFile(packageJsonPath, 'utf8');
+            // console.log({packageJsonPath})
+            // const jsonData: any = require('./package.json')
+            console.log(jsonData);
+            // console.log(jsonData.version)
+        }
+        catch (error) {
+            throw new Error("File does not exist");
+        }
+    });
 }
 function listFilesInDir(path) {
     console.log("Listing files in directory: ", path);
@@ -1636,14 +1641,6 @@ if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
   debug = function() {};
 }
 exports.debug = debug; // for test
-
-
-/***/ }),
-
-/***/ 358:
-/***/ ((module) => {
-
-module.exports = eval("require")("./package.json");
 
 
 /***/ }),
