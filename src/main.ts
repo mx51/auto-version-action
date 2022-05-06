@@ -8,8 +8,8 @@ import { join } from 'path';
  */
 function getVersion(){
   try {
-    const packageJsonPath = join(__dirname,'package.json')
-    const jsonData: any = require(packageJsonPath)
+    // const packageJsonPath = join('./package.json')
+    const jsonData: any = require('./package.json')
     console.log(jsonData)
     console.log(jsonData.version)
     
