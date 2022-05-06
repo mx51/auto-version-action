@@ -11,6 +11,7 @@ function getVersion(projectDir: string){
   try {
     listFilesInDir(projectDir);
     const packageJsonPath = join(projectDir,'package.json')
+    console.log({packageJsonPath})
     const jsonData: any = require(packageJsonPath)
     console.log(jsonData)
     console.log(jsonData.version)
