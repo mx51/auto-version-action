@@ -18,7 +18,8 @@ enum ChangeType {
 
 enum SupportedEvent {
   PUSH = "push",
-  PR = "pull_request"
+  PR = "pull_request",
+  PRR = "pull_request_review"
 }
 
 /**
@@ -96,9 +97,9 @@ async function run(): Promise<void> {
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);
 
-    if (!supportedEvents.includes(eventName)) {
-      throw new Error(`This Github Action does not support '${eventName}' events`)
-    }
+    // if (!supportedEvents.includes(eventName)) {
+    //   throw new Error(`This Github Action does not support '${eventName}' events`)
+    // }
 
     console.log("EVENT NAME", eventName)
 

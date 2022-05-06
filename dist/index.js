@@ -53,6 +53,7 @@ var SupportedEvent;
 (function (SupportedEvent) {
     SupportedEvent["PUSH"] = "push";
     SupportedEvent["PR"] = "pull_request";
+    SupportedEvent["PRR"] = "pull_request_review";
 })(SupportedEvent || (SupportedEvent = {}));
 /**
  * Retrieves the package version from the package.json file
@@ -122,9 +123,9 @@ function run() {
             const context = github.context;
             const eventName = context.eventName;
             const supportedEvents = Object.values(SupportedEvent);
-            if (!supportedEvents.includes(eventName)) {
-                throw new Error(`This Github Action does not support '${eventName}' events`);
-            }
+            // if (!supportedEvents.includes(eventName)) {
+            //   throw new Error(`This Github Action does not support '${eventName}' events`)
+            // }
             console.log("EVENT NAME", eventName);
             if (eventName == SupportedEvent.PR) {
                 const title = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.title;
