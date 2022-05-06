@@ -1,15 +1,17 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {wait} from './wait'
+import { join } from 'path';
 
 /**
  * Retrieves the package version from the package.json file
  */
-function getVersion(path: string){
+function getVersion(){
   try {
-    const packageJson: any = require(`${path}/package.json`)
-    console.log(packageJson)
-    console.log(packageJson.version)
+    const packageJsonPath = join(__dirname,'package.json')
+    const jsonData: any = require(packageJsonPath)
+    console.log(jsonData)
+    console.log(jsonData.version)
     
   } catch (error) {
     throw new Error("File does not exist")
@@ -21,6 +23,7 @@ async function run(): Promise<void> {
   try {
     console.log("HELLo WORLD")
     console.log("Current directory:", __dirname);
+    getVersion()
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
 
