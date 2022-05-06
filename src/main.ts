@@ -6,10 +6,10 @@ import { join } from 'path';
 /**
  * Retrieves the package version from the package.json file
  */
-function getVersion(){
+function getVersion(projectDir: string){
   try {
-    // const packageJsonPath = join('./package.json')
-    const jsonData: any = require('./package.json')
+    const packageJsonPath = join(projectDir,'package.json')
+    const jsonData: any = require(packageJsonPath)
     console.log(jsonData)
     console.log(jsonData.version)
     
@@ -21,9 +21,10 @@ function getVersion(){
 
 async function run(): Promise<void> {
   try {
+    const projectDir = core.getInput('projectDir')
     console.log("HELLo WORLD")
     console.log("Current directory:", __dirname);
-    getVersion()
+    getVersion(projectDir)
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
 

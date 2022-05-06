@@ -36,13 +36,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
+const path_1 = __nccwpck_require__(622);
 /**
  * Retrieves the package version from the package.json file
  */
-function getVersion() {
+function getVersion(projectDir) {
     try {
-        // const packageJsonPath = join('./package.json')
-        const jsonData = __nccwpck_require__(358);
+        const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
+        const jsonData = require(packageJsonPath);
         console.log(jsonData);
         console.log(jsonData.version);
     }
@@ -53,9 +54,10 @@ function getVersion() {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            const projectDir = core.getInput('projectDir');
             console.log("HELLo WORLD");
             console.log("Current directory:", __dirname);
-            getVersion();
+            getVersion(projectDir);
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
             // core.debug(new Date().toTimeString())
@@ -1624,14 +1626,6 @@ if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
   debug = function() {};
 }
 exports.debug = debug; // for test
-
-
-/***/ }),
-
-/***/ 358:
-/***/ ((module) => {
-
-module.exports = eval("require")("./package.json");
 
 
 /***/ }),
