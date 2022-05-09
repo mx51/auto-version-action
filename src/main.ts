@@ -124,13 +124,30 @@ function incrementSemVer(version: string, semVerType: SemVerType){
     return version.replace(numberPart![0],arr.join("."))
 }
 
+async function fetchPRTitle(pr: any, githubToken: string){
+  const owner = pr.base.user.login;
+  const repo = pr.base.repo.name;
+
+  const client = github.getOctokit(githubToken);
+  // The pull request info on the context isn't up to date. When
+  // the user updates the title and re-runs the workflow, it would
+  // be outdated. Therefore fetch the pull request via the REST API
+  // to ensure we use the current title.
+  const response = await client.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: pr.number
+  });
+
+  return response.data.title;
+}
+
 async function run(): Promise<void> {
   try {
 
     const githubToken = core.getInput('github_token');
     const projectDir = core.getInput('project_dir');
 
-    const client = github.getOctokit(githubToken);
     const context: Context = github.context;
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);
@@ -141,7 +158,8 @@ async function run(): Promise<void> {
 
     let changeType: SemVerType = SemVerType.UNKNOWN;
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-      const title = context.payload.pull_request?.title;
+      const title = await fetchPRTitle(context.payload.pull_request,githubToken)
+      
       changeType = getChangeTypeFromString(title);
 
       console.log({title})
