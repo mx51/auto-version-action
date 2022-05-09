@@ -197,8 +197,7 @@ function run() {
             console.log(context);
             // The rest of the functionality should only be done on PR approval
             // so we can return in all other cases.
-            if (eventName !== SupportedEvent.PRR)
-                return;
+            // if(eventName !== SupportedEvent.PRR) return;
             // console.log(client)
             const { version, jsonData } = getPackageVersion(projectDir);
             if (!isSemVer(version)) {
