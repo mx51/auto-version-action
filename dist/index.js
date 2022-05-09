@@ -63,8 +63,9 @@ var SupportedEvent;
 function getPackageVersion(projectDir) {
     const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
     try {
-        const jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
-        const version = JSON.parse(jsonData).version;
+        const jsonStr = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
+        const jsonData = JSON.parse(jsonStr);
+        const version = jsonData.version;
         return { version, jsonData };
     }
     catch (error) {

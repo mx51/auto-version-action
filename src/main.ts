@@ -30,8 +30,9 @@ enum SupportedEvent {
 function getPackageVersion(projectDir: string): any {
   const packageJsonPath = join(projectDir, 'package.json')
   try {
-    const jsonData = readFileSync(packageJsonPath, 'utf8')
-    const version = JSON.parse(jsonData).version
+    const jsonStr = readFileSync(packageJsonPath, 'utf8')
+    const jsonData = JSON.parse(jsonStr)
+    const version = jsonData.version
     return { version, jsonData }
   } catch (error) {
     throw new Error(`Failed to read file: ${packageJsonPath}`)
