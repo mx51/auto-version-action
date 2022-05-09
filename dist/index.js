@@ -42,16 +42,15 @@ const fs_1 = __nccwpck_require__(5747);
 const MAJOR_RE = /#major|\[\s?major\s?\]/gi;
 const MINOR_RE = /#minor|\[\s?minor\s?\]/gi;
 const PATCH_RE = /#patch|\[\s?patch\s?\]/gi;
-var ChangeType;
-(function (ChangeType) {
-    ChangeType[ChangeType["MAJOR"] = 0] = "MAJOR";
-    ChangeType[ChangeType["MINOR"] = 1] = "MINOR";
-    ChangeType[ChangeType["PATCH"] = 2] = "PATCH";
-    ChangeType[ChangeType["UNKNOWN"] = 3] = "UNKNOWN";
-})(ChangeType || (ChangeType = {}));
+var SemVerType;
+(function (SemVerType) {
+    SemVerType[SemVerType["MAJOR"] = 0] = "MAJOR";
+    SemVerType[SemVerType["MINOR"] = 1] = "MINOR";
+    SemVerType[SemVerType["PATCH"] = 2] = "PATCH";
+    SemVerType[SemVerType["UNKNOWN"] = 3] = "UNKNOWN";
+})(SemVerType || (SemVerType = {}));
 var SupportedEvent;
 (function (SupportedEvent) {
-    SupportedEvent["PUSH"] = "push";
     SupportedEvent["PR"] = "pull_request";
     SupportedEvent["PRR"] = "pull_request_review";
 })(SupportedEvent || (SupportedEvent = {}));
@@ -59,16 +58,32 @@ var SupportedEvent;
  * Retrieves the package version from the package.json file
  *
  * @param projectDir
- * @returns The current package version
+ * @returns The current package version and the jsonData object
  */
 function getPackageVersion(projectDir) {
     const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
     try {
-        let jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
-        return JSON.parse(jsonData).version;
+        const jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
+        const version = JSON.parse(jsonData).version;
+        return { version, jsonData };
     }
     catch (error) {
         throw new Error(`Failed to read file: ${packageJsonPath}`);
+    }
+}
+/**
+ * Retrieves the package version from the package.json file
+ *
+ * @param projectDir
+ * @returns The current package version and the jsonData object
+ */
+function updatePackageVersion(projectDir, data) {
+    const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
+    try {
+        (0, fs_1.writeFileSync)(packageJsonPath, JSON.stringify(data, null, 2));
+    }
+    catch (error) {
+        throw new Error(`Failed to update file: ${packageJsonPath}`);
     }
 }
 /**
@@ -78,9 +93,7 @@ function getPackageVersion(projectDir) {
  * @returns
  */
 function isSemVer(version) {
-    return /^[0-9]+.[0-9]+.[0-9]+/.test(version);
-}
-function detectChangeType() {
+    return /^[0-9]+.[0-9]+.[0-9]+[^.]/.test(version);
 }
 // async function getChangeTypeForContext(context: Context) {
 //   const titleTag = getChangeTypeForString(context.payload.pull_request?.body);
@@ -96,22 +109,46 @@ function detectChangeType() {
 function getChangeTypeFromString(str) {
     if (typeof str !== "string") {
         core.warning(`called getChangeTypeForString with non string: ${str}`);
-        return ChangeType.UNKNOWN;
+        return SemVerType.UNKNOWN;
     }
     if (MAJOR_RE.test(str))
-        return ChangeType.MAJOR;
+        return SemVerType.MAJOR;
     if (MINOR_RE.test(str))
-        return ChangeType.MINOR;
+        return SemVerType.MINOR;
     if (PATCH_RE.test(str))
-        return ChangeType.PATCH;
-    return ChangeType.UNKNOWN;
+        return SemVerType.PATCH;
+    return SemVerType.UNKNOWN;
 }
-function listFilesInDir(path) {
-    console.log("Listing files in directory: ", path);
-    const files = (0, fs_1.readdirSync)(path);
-    for (const file of files) {
-        console.log(file);
+// function listFilesInDir(path: string) {
+//   console.log("Listing files in directory: ", path)
+//   const files = readdirSync(path)
+//   for (const file of files) {
+//     console.log(file)
+//   }
+// }
+function incrementStrNum(num) {
+    return (parseInt(num) + 1).toString();
+}
+function incrementSemVer(version, semVerType) {
+    if (!isSemVer(version)) {
+        throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`);
     }
+    let numberPart = /^[0-9]+.[0-9]+.[0-9]+/.exec(version);
+    let arr = numberPart[0].split(".");
+    switch (semVerType) {
+        case SemVerType.MAJOR:
+            arr[0] = incrementStrNum(arr[0]);
+            break;
+        case SemVerType.MINOR:
+            arr[1] = incrementStrNum(arr[1]);
+            break;
+        case SemVerType.PATCH:
+            arr[2] = incrementStrNum(arr[2]);
+            break;
+        default:
+            throw new Error("ERROR");
+    }
+    return version.replace(numberPart[0], arr.join("."));
 }
 function run() {
     var _a;
@@ -126,12 +163,13 @@ function run() {
             if (!supportedEvents.includes(eventName))
                 throw new Error(`This Github Action does not support '${eventName}' events`);
             console.log("EVENT NAME", eventName);
-            if (eventName == SupportedEvent.PR) {
+            let changeType = SemVerType.UNKNOWN;
+            if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
                 const title = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.title;
-                const changeType = getChangeTypeFromString(title);
-                if (changeType == ChangeType.UNKNOWN)
+                changeType = getChangeTypeFromString(title);
+                if (changeType == SemVerType.UNKNOWN)
                     throw new Error(`
-        PR title does not specify change type.
+        PR title, '${title}' does not specify a Semantic Version type.
 
         Select one of these change types: MAJOR, MINOR or PATCH
         and prefix to title after a '#' or between square brackets '[]'
@@ -139,13 +177,22 @@ function run() {
         e.g. #MAJOR <PR description> or [MINOR] <PR description>
       `);
             }
-            console.log(client);
+            // The rest of the functionality should only be done on PR approval
+            // so we can return in all other cases.
+            if (eventName !== SupportedEvent.PRR)
+                return;
+            // console.log(client)
             console.log(context);
-            const version = getPackageVersion(projectDir);
+            const { version, jsonData } = getPackageVersion(projectDir);
             if (!isSemVer(version)) {
                 throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`);
             }
             core.setOutput('current_version', version);
+            let newVersion = incrementSemVer(version, changeType);
+            core.setOutput('new_version', newVersion);
+            jsonData.version = newVersion;
+            console.log(`Updating version ${version} to ${newVersion}`);
+            updatePackageVersion(projectDir, jsonData);
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
             // core.debug(new Date().toTimeString())
