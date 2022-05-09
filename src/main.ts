@@ -31,7 +31,8 @@ function getPackageVersion(projectDir: string): any {
   const packageJsonPath = join(projectDir, 'package.json')
   try {
     const jsonData = readFileSync(packageJsonPath, 'utf8')
-    const version = JSON.parse(jsonData).version
+    let version = JSON.parse(jsonData).version
+    version = version.replace('\'','')
     return { version, jsonData }
   } catch (error) {
     throw new Error(`Failed to read file: ${packageJsonPath}`)
