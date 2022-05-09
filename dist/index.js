@@ -64,8 +64,7 @@ function getPackageVersion(projectDir) {
     const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
     try {
         const jsonData = (0, fs_1.readFileSync)(packageJsonPath, 'utf8');
-        let version = JSON.parse(jsonData).version;
-        version = version.replace('\'', '');
+        const version = JSON.parse(jsonData).version;
         return { version, jsonData };
     }
     catch (error) {
@@ -94,7 +93,7 @@ function updatePackageVersion(projectDir, data) {
  * @returns
  */
 function isSemVer(version) {
-    return /^[0-9]+.[0-9]+.[0-9]+[^.]/.test(version);
+    return /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/.test(version);
 }
 // async function getChangeTypeForContext(context: Context) {
 //   const titleTag = getChangeTypeForString(context.payload.pull_request?.body);

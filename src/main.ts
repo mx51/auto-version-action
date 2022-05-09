@@ -31,8 +31,7 @@ function getPackageVersion(projectDir: string): any {
   const packageJsonPath = join(projectDir, 'package.json')
   try {
     const jsonData = readFileSync(packageJsonPath, 'utf8')
-    let version = JSON.parse(jsonData).version
-    version = version.replace('\'','')
+    const version = JSON.parse(jsonData).version
     return { version, jsonData }
   } catch (error) {
     throw new Error(`Failed to read file: ${packageJsonPath}`)
@@ -61,7 +60,7 @@ function getPackageVersion(projectDir: string): any {
  * @returns 
  */
 function isSemVer(version: string): boolean {
-  return /^[0-9]+.[0-9]+.[0-9]+[^.]/.test(version);
+  return /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/.test(version);
 }
 
 // async function getChangeTypeForContext(context: Context) {
