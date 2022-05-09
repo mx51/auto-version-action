@@ -143,6 +143,9 @@ async function run(): Promise<void> {
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
       const title = context.payload.pull_request?.title;
       changeType = getChangeTypeFromString(title);
+
+      console.log({title})
+
       if (changeType == SemVerType.UNKNOWN) throw new Error(`
         PR title, '${title}' does not specify a Semantic Version type.
 
@@ -153,12 +156,12 @@ async function run(): Promise<void> {
       `);
     }
 
+    console.log(context)
     // The rest of the functionality should only be done on PR approval
     // so we can return in all other cases.
     if(eventName !== SupportedEvent.PRR) return;
 
     // console.log(client)
-    console.log(context)
 
     const { version, jsonData } = getPackageVersion(projectDir)
 
@@ -175,7 +178,7 @@ async function run(): Promise<void> {
     jsonData.version = newVersion;
 
     console.log(`Updating version ${version} to ${newVersion}`);
-    
+
     updatePackageVersion(projectDir, jsonData)
 
 

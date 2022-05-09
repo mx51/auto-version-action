@@ -167,6 +167,7 @@ function run() {
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
                 const title = (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.title;
                 changeType = getChangeTypeFromString(title);
+                console.log({ title });
                 if (changeType == SemVerType.UNKNOWN)
                     throw new Error(`
         PR title, '${title}' does not specify a Semantic Version type.
@@ -177,12 +178,12 @@ function run() {
         e.g. #MAJOR <PR description> or [MINOR] <PR description>
       `);
             }
+            console.log(context);
             // The rest of the functionality should only be done on PR approval
             // so we can return in all other cases.
             if (eventName !== SupportedEvent.PRR)
                 return;
             // console.log(client)
-            console.log(context);
             const { version, jsonData } = getPackageVersion(projectDir);
             if (!isSemVer(version)) {
                 throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`);
