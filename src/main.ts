@@ -4,6 +4,7 @@ import { wait } from './wait'
 import { join } from 'path';
 import { writeFileSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
+import simpleGit, { CleanOptions, SimpleGit, SimpleGitOptions } from 'simple-git';
 
 const MAJOR_RE = /#major|\[\s?major\s?\]/gi
 const MINOR_RE = /#minor|\[\s?minor\s?\]/gi
@@ -45,7 +46,7 @@ function getPackageVersion(projectDir: string): any {
  * @param projectDir 
  * @returns The current package version and the jsonData object
  */
- function updatePackageVersion(projectDir: string, data: any): any {
+function updatePackageVersion(projectDir: string, data: any): any {
   const packageJsonPath = join(projectDir, 'package.json')
   try {
     writeFileSync(packageJsonPath, JSON.stringify(data, null, 2))
@@ -98,34 +99,34 @@ function getChangeTypeFromString(str: string): SemVerType {
 //   }
 // }
 
-function incrementStrNum(num: string){
-  return (parseInt(num)+1).toString()
+function incrementStrNum(num: string) {
+  return (parseInt(num) + 1).toString()
 }
 
-function incrementSemVer(version: string, semVerType: SemVerType){
+function incrementSemVer(version: string, semVerType: SemVerType) {
   if (!isSemVer(version)) {
     throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`)
   }
-    let numberPart = /^[0-9]+.[0-9]+.[0-9]+/.exec(version)
-    let arr = numberPart![0].split(".");
+  let numberPart = /^[0-9]+.[0-9]+.[0-9]+/.exec(version)
+  let arr = numberPart![0].split(".");
 
-    switch (semVerType) {
-      case SemVerType.MAJOR:
-        arr[0] = incrementStrNum(arr[0])
-        break;
-      case SemVerType.MINOR:
-        arr[1] = incrementStrNum(arr[1])
-        break;
-      case SemVerType.PATCH:
-        arr[2] = incrementStrNum(arr[2])
-        break;
-      default:
-        throw new Error("ERROR")
-    }
-    return version.replace(numberPart![0],arr.join("."))
+  switch (semVerType) {
+    case SemVerType.MAJOR:
+      arr[0] = incrementStrNum(arr[0])
+      break;
+    case SemVerType.MINOR:
+      arr[1] = incrementStrNum(arr[1])
+      break;
+    case SemVerType.PATCH:
+      arr[2] = incrementStrNum(arr[2])
+      break;
+    default:
+      throw new Error("ERROR")
+  }
+  return version.replace(numberPart![0], arr.join("."))
 }
 
-async function fetchPRTitle(pr: any, githubToken: string){
+async function fetchPRTitle(pr: any, githubToken: string) {
   const owner = pr.base.user.login;
   const repo = pr.base.repo.name;
 
@@ -149,6 +150,15 @@ async function run(): Promise<void> {
     const githubToken = core.getInput('github_token');
     const projectDir = core.getInput('project_dir');
 
+    const options: Partial<SimpleGitOptions> = {
+      baseDir: process.cwd(),
+      binary: 'git',
+      maxConcurrentProcesses: 1,
+    };
+
+    // when setting all options in a single object
+    const git: SimpleGit = simpleGit(options);
+
     const context: Context = github.context;
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);
@@ -159,11 +169,11 @@ async function run(): Promise<void> {
 
     let changeType: SemVerType = SemVerType.UNKNOWN;
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-      const title = await fetchPRTitle(context.payload.pull_request,githubToken)
-      
+      const title = await fetchPRTitle(context.payload.pull_request, githubToken)
+
       changeType = getChangeTypeFromString(title);
 
-      console.log({title})
+      console.log({ title })
 
       if (changeType == SemVerType.UNKNOWN) throw new Error(`
         PR title, '${title}' does not specify a Semantic Version type.
@@ -175,13 +185,14 @@ async function run(): Promise<void> {
       `);
     }
 
-    console.log(context)
+    // console.log(context)
     // The rest of the functionality should only be done on PR approval
     // so we can return in all other cases.
     // if(eventName !== SupportedEvent.PRR) return;
 
     // console.log(client)
     const branchRef = context.payload.pull_request!.head.ref
+    console.log(context.payload.pull_request!.head)
     core.setOutput('branch_ref', branchRef)
 
     const { version, jsonData } = getPackageVersion(projectDir)
@@ -189,11 +200,11 @@ async function run(): Promise<void> {
     if (!isSemVer(version)) {
       throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
     }
-    
+
     core.setOutput('current_version', version)
-    
+
     let newVersion = incrementSemVer(version, changeType)
-    
+
     core.setOutput('new_version', newVersion)
 
     jsonData.version = newVersion;
@@ -202,6 +213,9 @@ async function run(): Promise<void> {
 
     updatePackageVersion(projectDir, jsonData)
 
+    git.add(`${join(projectDir, 'package.json')}`)
+    .commit("Updating version")
+    .push('origin', `HEAD:${branchRef}`);
 
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
