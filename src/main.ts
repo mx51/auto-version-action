@@ -222,7 +222,10 @@ async function run(): Promise<void> {
     updatePackageVersion(projectDir, jsonData)
 
     console.log("Pushing changes")
-    await git.add(".")
+    await git
+    .addConfig('user.name', 'github-actions')
+    .addConfig('user.email', 'github-actions@github.com')
+    .add(".")
     .commit("Updating version")
     .push('origin', `HEAD:${branchRef}`,["--force"]);
 

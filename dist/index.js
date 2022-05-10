@@ -230,7 +230,10 @@ function run() {
             console.log(`Updating version ${version} to ${newVersion}`);
             updatePackageVersion(projectDir, jsonData);
             console.log("Pushing changes");
-            yield git.add(".")
+            yield git
+                .addConfig('user.name', 'github-actions')
+                .addConfig('user.email', 'github-actions@github.com')
+                .add(".")
                 .commit("Updating version")
                 .push('origin', `HEAD:${branchRef}`, ["--force"]);
             // const ms: string = core.getInput('milliseconds')
