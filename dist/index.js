@@ -199,6 +199,8 @@ function run() {
             // so we can return in all other cases.
             // if(eventName !== SupportedEvent.PRR) return;
             // console.log(client)
+            const branchRef = context.payload.pull_request.head.ref;
+            core.setOutput('branch_ref', branchRef);
             const { version, jsonData } = getPackageVersion(projectDir);
             if (!isSemVer(version)) {
                 throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`);

@@ -181,6 +181,8 @@ async function run(): Promise<void> {
     // if(eventName !== SupportedEvent.PRR) return;
 
     // console.log(client)
+    const branchRef = context.payload.pull_request!.head.ref
+    core.setOutput('branch_ref', branchRef)
 
     const { version, jsonData } = getPackageVersion(projectDir)
 
