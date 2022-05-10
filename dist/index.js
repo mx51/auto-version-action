@@ -55,6 +55,7 @@ var SemVerType;
 })(SemVerType || (SemVerType = {}));
 var SupportedEvent;
 (function (SupportedEvent) {
+    SupportedEvent["PUSH"] = "push";
     SupportedEvent["PR"] = "pull_request";
     SupportedEvent["PRR"] = "pull_request_review";
 })(SupportedEvent || (SupportedEvent = {}));
@@ -190,6 +191,11 @@ function run() {
             if (!supportedEvents.includes(eventName))
                 throw new Error(`This Github Action does not support '${eventName}' events`);
             console.log("EVENT NAME", eventName);
+            if (eventName == SupportedEvent.PUSH) {
+                console.log("COMMENTS", github.context.payload.comment);
+                return;
+            }
+            ;
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
                 const title = yield fetchPRTitle(context.payload.pull_request, githubToken);
@@ -223,9 +229,10 @@ function run() {
             jsonData.version = newVersion;
             console.log(`Updating version ${version} to ${newVersion}`);
             updatePackageVersion(projectDir, jsonData);
-            git.add(".")
+            console.log("Pushing changes");
+            yield git.add(".")
                 .commit("Updating version")
-                .push('origin', `HEAD:${branchRef}`);
+                .push('origin', `HEAD:${branchRef}`, ["--force"]);
             // const ms: string = core.getInput('milliseconds')
             // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
             // core.debug(new Date().toTimeString())

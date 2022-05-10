@@ -18,6 +18,7 @@ enum SemVerType {
 }
 
 enum SupportedEvent {
+  PUSH = "push",
   PR = "pull_request",
   PRR = "pull_request_review"
 }
@@ -167,6 +168,13 @@ async function run(): Promise<void> {
 
     console.log("EVENT NAME", eventName)
 
+    if(eventName == SupportedEvent.PUSH){
+      console.log("COMMENTS", github.context.payload.comment)      
+      return
+    };
+
+
+
     let changeType: SemVerType = SemVerType.UNKNOWN;
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
       const title = await fetchPRTitle(context.payload.pull_request, githubToken)
@@ -213,9 +221,10 @@ async function run(): Promise<void> {
 
     updatePackageVersion(projectDir, jsonData)
 
-    git.add(".")
+    console.log("Pushing changes")
+    await git.add(".")
     .commit("Updating version")
-    .push('origin', `HEAD:${branchRef}`);
+    .push('origin', `HEAD:${branchRef}`,["--force"]);
 
     // const ms: string = core.getInput('milliseconds')
     // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
