@@ -213,7 +213,7 @@ async function run(): Promise<void> {
 
     updatePackageVersion(projectDir, jsonData)
 
-    git.add(`${join(projectDir, 'package.json')}`)
+    git.add(".")
     .commit("Updating version")
     .push('origin', `HEAD:${branchRef}`);
 

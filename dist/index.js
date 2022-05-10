@@ -223,7 +223,7 @@ function run() {
             jsonData.version = newVersion;
             console.log(`Updating version ${version} to ${newVersion}`);
             updatePackageVersion(projectDir, jsonData);
-            git.add(`${(0, path_1.join)(projectDir, 'package.json')}`)
+            git.add(".")
                 .commit("Updating version")
                 .push('origin', `HEAD:${branchRef}`);
             // const ms: string = core.getInput('milliseconds')
