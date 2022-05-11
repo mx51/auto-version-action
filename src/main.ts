@@ -1,14 +1,9 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { wait } from './wait'
 import { join } from 'path';
 import { writeFileSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
-import simpleGit, { CleanOptions, SimpleGit, SimpleGitOptions } from 'simple-git';
-
-const MAJOR_RE = /#major|\[\s?major\s?\]/gi
-const MINOR_RE = /#minor|\[\s?minor\s?\]/gi
-const PATCH_RE = /#patch|\[\s?patch\s?\]/gi
+import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
 
 enum SemVerType {
   MAJOR,
@@ -23,23 +18,32 @@ enum SupportedEvent {
   PRR = "pull_request_review"
 }
 
-/**
- * Retrieves the package version from the package.json file
- * 
- * @param projectDir 
- * @returns The current package version and the jsonData object
- */
-function getPackageVersion(projectDir: string): any {
-  const packageJsonPath = join(projectDir, 'package.json')
-  try {
-    const jsonStr = readFileSync(packageJsonPath, 'utf8')
-    const jsonData = JSON.parse(jsonStr)
-    const version = jsonData.version
-    return { version, jsonData }
-  } catch (error) {
-    throw new Error(`Failed to read file: ${packageJsonPath}`)
-  }
+enum Inputs {
+  GITHUB_TOKEN = 'github_token',
+  PROJECT_DIR = 'project_dir',
+  CHANGELOG_MSG = 'changelog_msg',
+  ADD_CHANGELOG_ENTRY = 'add_changelog_entry',
+  BRANCH = 'branch',
+  CHANGELOG_FILENAME = 'changelog_filename',
 }
+
+const options: Partial<SimpleGitOptions> = {
+  baseDir: process.cwd(),
+  binary: 'git',
+  maxConcurrentProcesses: 1,
+};
+
+const reSemVerFormat = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/
+const reSemVerFormatBasic = /^[0-9]+.[0-9]+.[0-9]+/
+const reSemVerChangeLogEntry = /^\#\#\s\[([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?\]/m
+const reMajor = /#major|\[\s?major\s?\]/gi
+const reMinor = /#minor|\[\s?minor\s?\]/gi
+const rePatch = /#patch|\[\s?patch\s?\]/gi
+
+const git: SimpleGit = simpleGit(options);
+git
+  .addConfig('user.name', 'github-actions')
+  .addConfig('user.email', 'github-actions@github.com')
 
 /**
  * Retrieves the package version from the package.json file
@@ -47,12 +51,38 @@ function getPackageVersion(projectDir: string): any {
  * @param projectDir 
  * @returns The current package version and the jsonData object
  */
-function updatePackageVersion(projectDir: string, data: any): any {
-  const packageJsonPath = join(projectDir, 'package.json')
+function getPackageVersion(packageJsonPath: string): any {
+  const jsonStr = readFile(packageJsonPath)
+  const jsonData = JSON.parse(jsonStr)
+  const version = jsonData.version
+  return { version, jsonData }
+}
+
+
+
+/**
+ * Retrieves the package version from the package.json file
+ * 
+ * @param projectDir 
+ * @returns The current package version and the jsonData object
+ */
+function updatePackageVersion(packageJsonPath: string, data: any): any {
+  writeToFile(packageJsonPath, JSON.stringify(data, null, 2))
+}
+
+function writeToFile(filePath: string, content: string) {
   try {
-    writeFileSync(packageJsonPath, JSON.stringify(data, null, 2))
+    writeFileSync(filePath, content)
   } catch (error) {
-    throw new Error(`Failed to update file: ${packageJsonPath}`)
+    throw new Error(`Failed to update file: ${filePath}`)
+  }
+}
+
+function readFile(filePath: string, encoding: "utf8" | "base64" | "ascii" = "utf8") {
+  try {
+    return readFileSync(filePath, encoding)
+  } catch (error) {
+    throw new Error(`Failed to read file: ${filePath}`)
   }
 }
 
@@ -63,42 +93,16 @@ function updatePackageVersion(projectDir: string, data: any): any {
  * @returns 
  */
 function isSemVer(version: string): boolean {
-  return /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/.test(version);
+  return reSemVerFormat.test(version);
 }
 
-// async function getChangeTypeForContext(context: Context) {
-//   const titleTag = getChangeTypeForString(context.payload.pull_request?.body);
-//   if (titleTag !== ChangeTypes.UNKNOWN) {
-//     return titleTag;
-//   }
-//   const bodyTag = getChangeTypeForString(context.payload.pull_request.body);
-//   if (bodyTag !== ChangeTypes.UNKNOWN) {
-//     return bodyTag;
-//   }
-
-//   return ChangeTypes.UNKNOWN;
-// }
-
 function getChangeTypeFromString(str: string): SemVerType {
-  if (typeof str !== "string") {
-    core.warning(`called getChangeTypeForString with non string: ${str}`)
-    return SemVerType.UNKNOWN
-  }
-
-  if (MAJOR_RE.test(str)) return SemVerType.MAJOR
-  if (MINOR_RE.test(str)) return SemVerType.MINOR
-  if (PATCH_RE.test(str)) return SemVerType.PATCH
+  if (reMajor.test(str)) return SemVerType.MAJOR
+  if (reMinor.test(str)) return SemVerType.MINOR
+  if (rePatch.test(str)) return SemVerType.PATCH
 
   return SemVerType.UNKNOWN
 }
-
-// function listFilesInDir(path: string) {
-//   console.log("Listing files in directory: ", path)
-//   const files = readdirSync(path)
-//   for (const file of files) {
-//     console.log(file)
-//   }
-// }
 
 function incrementStrNum(num: string) {
   return (parseInt(num) + 1).toString()
@@ -108,7 +112,7 @@ function incrementSemVer(version: string, semVerType: SemVerType) {
   if (!isSemVer(version)) {
     throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`)
   }
-  let numberPart = /^[0-9]+.[0-9]+.[0-9]+/.exec(version)
+  let numberPart = reSemVerFormatBasic.exec(version)
   let arr = numberPart![0].split(".");
 
   switch (semVerType) {
@@ -145,20 +149,44 @@ async function fetchPRTitle(pr: any, githubToken: string) {
   return response.data.title;
 }
 
+/**
+ * Commit changes to a remote branch
+ * 
+ * @param branchRef Name of the branch to commit changes to
+ * @param msg The commit message
+ * @param fileRef [Optional] Reference to file to commit. References all changed files by default
+ */
+async function commitChanges(branchRef: string, msg: string, fileRef: string = ".") {
+  core.debug("Commit & push changes")
+
+  await git
+    .add(fileRef)
+    .commit(msg)
+    .push('origin', `HEAD:${branchRef}`, ["--force"]);
+}
+
+function updateChangeLog(filePath: string, version: string, msg: string) {
+  const newEntry = `[${version}] - ${msg}\n`
+
+  let content = readFile(filePath)
+  // Find the location to insert
+  const latestEntryIndex = content.search(reSemVerChangeLogEntry)
+  let newContent = `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}`;
+  writeToFile(filePath, newContent);
+}
+
+
 async function run(): Promise<void> {
   try {
+    const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
+    const projectDir = core.getInput(Inputs.PROJECT_DIR);
+    const changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
+    const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
+    const branchRef = core.getInput(Inputs.BRANCH);
+    const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
 
-    const githubToken = core.getInput('github_token');
-    const projectDir = core.getInput('project_dir');
-
-    const options: Partial<SimpleGitOptions> = {
-      baseDir: process.cwd(),
-      binary: 'git',
-      maxConcurrentProcesses: 1,
-    };
-
-    // when setting all options in a single object
-    const git: SimpleGit = simpleGit(options);
+    const packageJsonPath = join(projectDir, 'package.json')
+    const changelogPath = join(projectDir, changelogFilename)
 
     const context: Context = github.context;
     const eventName = context.eventName;
@@ -166,22 +194,13 @@ async function run(): Promise<void> {
 
     if (!supportedEvents.includes(eventName)) throw new Error(`This Github Action does not support '${eventName}' events`)
 
-    console.log("EVENT NAME", eventName)
-
-    if(eventName == SupportedEvent.PUSH){
-      console.log("COMMENTS", github.context.payload.comment)      
-      return
-    };
-
-
-
     let changeType: SemVerType = SemVerType.UNKNOWN;
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
+      core.debug("Checking title format...")
+
       const title = await fetchPRTitle(context.payload.pull_request, githubToken)
 
       changeType = getChangeTypeFromString(title);
-
-      console.log({ title })
 
       if (changeType == SemVerType.UNKNOWN) throw new Error(`
         PR title, '${title}' does not specify a Semantic Version type.
@@ -193,50 +212,43 @@ async function run(): Promise<void> {
       `);
     }
 
-    // console.log(context)
+    const { version, jsonData } = getPackageVersion(packageJsonPath)
+
+    if (eventName == SupportedEvent.PUSH) {
+      if(addChangeLogEntry && (!changelogFilename || !changelogMsg)) 
+        throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_MSG}' must be specified`)
+      
+      if (addChangeLogEntry) {
+        updateChangeLog(changelogPath, version, changelogMsg)
+        commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath)
+      } else {
+        core.warning(`No action taken. Set ${Inputs.ADD_CHANGELOG_ENTRY} to add a changelog entry`)
+      }
+    }
+
     // The rest of the functionality should only be done on PR approval
     // so we can return in all other cases.
-    // if(eventName !== SupportedEvent.PRR) return;
-
-    // console.log(client)
-    const branchRef = context.payload.pull_request!.head.ref
-    console.log(context.payload.pull_request!.head)
-    core.setOutput('branch_ref', branchRef)
-
-    const { version, jsonData } = getPackageVersion(projectDir)
-
+    if(eventName !== SupportedEvent.PRR) return;
+    // const branchRef = context.payload.pull_request!.head.ref
+    // core.setOutput('branch_ref', branchRef)
+    
+    core.debug("Checking version follows SemVer format...")
     if (!isSemVer(version)) {
       throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
     }
 
-    core.setOutput('current_version', version)
-
     let newVersion = incrementSemVer(version, changeType)
-
+    
+    core.setOutput('current_version', version)
     core.setOutput('new_version', newVersion)
 
     jsonData.version = newVersion;
 
-    console.log(`Updating version ${version} to ${newVersion}`);
+    core.info(`Updating version ${version} to ${newVersion}`);
 
-    updatePackageVersion(projectDir, jsonData)
+    updatePackageVersion(packageJsonPath, jsonData)
+    commitChanges(branchRef, "Updating package.json", packageJsonPath)
 
-    console.log("Pushing changes")
-    await git
-    .addConfig('user.name', 'github-actions')
-    .addConfig('user.email', 'github-actions@github.com')
-    .add(".")
-    .commit("Updating version")
-    .push('origin', `HEAD:${branchRef}`,["--force"]);
-
-    // const ms: string = core.getInput('milliseconds')
-    // core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
-
-    // core.debug(new Date().toTimeString())
-    // await wait(parseInt(ms, 10))
-    // core.debug(new Date().toTimeString())
-
-    // core.setOutput('time', new Date().toTimeString())
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

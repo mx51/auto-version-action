@@ -11,6 +11,20 @@ inputs:
     required: false
     description: 'input description here'
     default: ./
+  branch: # change this
+    required: false
+    description: 'input description here'
+  add_changelog_entry:
+    required: true
+    description: 'input description here'
+    default: false
+  changelog_filename: # change this
+    required: false
+    description: 'input description here'
+  changelog_msg: # change this
+    required: false
+    description: 'input description here'
+
 runs:
   using: 'node16'
   main: 'dist/index.js'
