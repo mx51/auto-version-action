@@ -181,7 +181,7 @@ async function run(): Promise<void> {
     const projectDir = core.getInput(Inputs.PROJECT_DIR);
     const changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
     const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
-    const branchRef = core.getInput(Inputs.BRANCH);
+    let branchRef = core.getInput(Inputs.BRANCH);
     const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
 
     const packageJsonPath = join(projectDir, 'package.json')
@@ -228,8 +228,8 @@ async function run(): Promise<void> {
     // The rest of the functionality should only be done on PR approval
     // so we can return in all other cases.
     if(eventName !== SupportedEvent.PRR) return;
-    // const branchRef = context.payload.pull_request!.head.ref
-    // core.setOutput('branch_ref', branchRef)
+    branchRef = context.payload.pull_request!.head.ref
+    core.setOutput('branch_ref', branchRef)
     
     core.debug("Checking version follows SemVer format...")
     if (!isSemVer(version)) {
