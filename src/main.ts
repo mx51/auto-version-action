@@ -175,7 +175,6 @@ function updateChangeLog(filePath: string, version: string, msg: string) {
   writeToFile(filePath, newContent);
 }
 
-
 async function run(): Promise<void> {
   try {
     const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
