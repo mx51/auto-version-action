@@ -193,7 +193,7 @@ function commitChanges(branchRef, msg, fileRef = ".") {
     });
 }
 function updateChangeLog(filePath, version, msg) {
-    const newEntry = `[${version}] - ${msg}\n`;
+    const newEntry = `## [${version}] - ${msg}\n`;
     let content = readFile(filePath);
     // Find the location to insert
     const latestEntryIndex = content.search(reSemVerChangeLogEntry);

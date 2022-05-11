@@ -166,7 +166,7 @@ async function commitChanges(branchRef: string, msg: string, fileRef: string = "
 }
 
 function updateChangeLog(filePath: string, version: string, msg: string) {
-  const newEntry = `[${version}] - ${msg}\n`
+  const newEntry = `## [${version}] - ${msg}\n`
 
   let content = readFile(filePath)
   // Find the location to insert
