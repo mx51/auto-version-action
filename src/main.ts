@@ -58,8 +58,6 @@ function getPackageVersion(packageJsonPath: string): any {
   return { version, jsonData }
 }
 
-
-
 /**
  * Retrieves the package version from the package.json file
  * 
@@ -166,13 +164,22 @@ async function commitChanges(branchRef: string, msg: string, fileRef: string = "
 }
 
 function updateChangeLog(filePath: string, version: string, msg: string) {
-  const newEntry = `## [${version}] - ${msg}\n`
+  const newEntry = `## [${version}] - ${getCurrentDate()}\n${msg}\n`
 
   let content = readFile(filePath)
   // Find the location to insert
   const latestEntryIndex = content.search(reSemVerChangeLogEntry)
-  let newContent = `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}`;
+  let newContent = latestEntryIndex >= 0 ? `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}` : `${content}\n${newEntry}`;
+  
   writeToFile(filePath, newContent);
+}
+
+function getCurrentDate(){
+  const dt = new Date();
+  const year  = dt.getFullYear();
+  const month = (dt.getMonth() + 1).toString().padStart(2, "0");
+  const day   = dt.getDate().toString().padStart(2, "0");
+  return `${day}-${month}-${year}`
 }
 
 async function run(): Promise<void> {

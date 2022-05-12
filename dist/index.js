@@ -193,12 +193,19 @@ function commitChanges(branchRef, msg, fileRef = ".") {
     });
 }
 function updateChangeLog(filePath, version, msg) {
-    const newEntry = `## [${version}] - ${msg}\n`;
+    const newEntry = `## [${version}] - ${getCurrentDate()}\n${msg}\n`;
     let content = readFile(filePath);
     // Find the location to insert
     const latestEntryIndex = content.search(reSemVerChangeLogEntry);
-    let newContent = `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}`;
+    let newContent = latestEntryIndex >= 0 ? `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}` : `${content}\n${newEntry}`;
     writeToFile(filePath, newContent);
+}
+function getCurrentDate() {
+    const dt = new Date();
+    const year = dt.getFullYear();
+    const month = (dt.getMonth() + 1).toString().padStart(2, "0");
+    const day = dt.getDate().toString().padStart(2, "0");
+    return `${day}-${month}-${year}`;
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
