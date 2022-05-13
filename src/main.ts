@@ -4,6 +4,7 @@ import { join } from 'path';
 import { writeFileSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
+import { WebhookPayload } from '@actions/github/lib/interfaces';
 
 enum SemVerType {
   MAJOR,
@@ -32,6 +33,8 @@ const options: Partial<SimpleGitOptions> = {
   binary: 'git',
   maxConcurrentProcesses: 1,
 };
+
+
 
 const reSemVerFormat = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/
 const reSemVerFormatBasic = /^[0-9]+.[0-9]+.[0-9]+/
@@ -64,11 +67,11 @@ function getPackageVersion(packageJsonPath: string): any {
  * @param projectDir 
  * @returns The current package version and the jsonData object
  */
-function updatePackageVersion(packageJsonPath: string, data: any): any {
+function updatePackageVersion(packageJsonPath: string, data: Object): void {
   writeToFile(packageJsonPath, JSON.stringify(data, null, 2))
 }
 
-function writeToFile(filePath: string, content: string) {
+function writeToFile(filePath: string, content: string): void {
   try {
     writeFileSync(filePath, content)
   } catch (error) {
@@ -76,7 +79,7 @@ function writeToFile(filePath: string, content: string) {
   }
 }
 
-function readFile(filePath: string, encoding: "utf8" | "base64" | "ascii" = "utf8") {
+function readFile(filePath: string, encoding: "utf8" | "base64" | "ascii" = "utf8"): string {
   try {
     return readFileSync(filePath, encoding)
   } catch (error) {
@@ -129,15 +132,21 @@ function incrementSemVer(version: string, semVerType: SemVerType) {
   return version.replace(numberPart![0], arr.join("."))
 }
 
-async function fetchPRTitle(pr: any, githubToken: string) {
+/**
+ * Fetch the PR title via the GitHub Rest API
+ * 
+ * @param pr The pull_request object
+ * @param githubToken The GitHub Token
+ * @returns The PR title
+ */
+async function fetchPRTitle(pr: WebhookPayload["pull_request"], githubToken: string) {
+  if(!pr) throw new Error("pull_request object is undefined")
+
   const owner = pr.base.user.login;
   const repo = pr.base.repo.name;
 
   const client = github.getOctokit(githubToken);
-  // The pull request info on the context isn't up to date. When
-  // the user updates the title and re-runs the workflow, it would
-  // be outdated. Therefore fetch the pull request via the REST API
-  // to ensure we use the current title.
+
   const response = await client.rest.pulls.get({
     owner,
     repo,
@@ -204,6 +213,10 @@ async function run(): Promise<void> {
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
       core.debug("Checking title format...")
 
+      // The pull request info on the context isn't kept up to date. When
+      // the user updates the title and re-runs the workflow, it would
+      // be outdated. Therefore fetch the pull request via the REST API
+      // to ensure we use the current title.
       const title = await fetchPRTitle(context.payload.pull_request, githubToken)
 
       changeType = getChangeTypeFromString(title);

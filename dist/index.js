@@ -159,15 +159,20 @@ function incrementSemVer(version, semVerType) {
     }
     return version.replace(numberPart[0], arr.join("."));
 }
+/**
+ * Fetch the PR title via the GitHub Rest API
+ *
+ * @param pr The pull_request object
+ * @param githubToken The GitHub Token
+ * @returns The PR title
+ */
 function fetchPRTitle(pr, githubToken) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (!pr)
+            throw new Error("pull_request object is undefined");
         const owner = pr.base.user.login;
         const repo = pr.base.repo.name;
         const client = github.getOctokit(githubToken);
-        // The pull request info on the context isn't up to date. When
-        // the user updates the title and re-runs the workflow, it would
-        // be outdated. Therefore fetch the pull request via the REST API
-        // to ensure we use the current title.
         const response = yield client.rest.pulls.get({
             owner,
             repo,
@@ -226,6 +231,10 @@ function run() {
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
                 core.debug("Checking title format...");
+                // The pull request info on the context isn't kept up to date. When
+                // the user updates the title and re-runs the workflow, it would
+                // be outdated. Therefore fetch the pull request via the REST API
+                // to ensure we use the current title.
                 const title = yield fetchPRTitle(context.payload.pull_request, githubToken);
                 changeType = getChangeTypeFromString(title);
                 if (changeType == SemVerType.UNKNOWN)
