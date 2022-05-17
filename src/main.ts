@@ -34,8 +34,6 @@ const options: Partial<SimpleGitOptions> = {
   maxConcurrentProcesses: 1,
 };
 
-
-
 const reSemVerFormat = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/
 const reSemVerFormatBasic = /^[0-9]+.[0-9]+.[0-9]+/
 const reSemVerChangeLogEntry = /^\#\#\s\[([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?\]/m
@@ -44,8 +42,7 @@ const reMinor = /#minor|\[\s?minor\s?\]/gi
 const rePatch = /#patch|\[\s?patch\s?\]/gi
 
 const git: SimpleGit = simpleGit(options);
-git
-  .addConfig('user.name', 'github-actions')
+git.addConfig('user.name', 'github-actions')
   .addConfig('user.email', 'github-actions@github.com')
 
 /**
@@ -122,6 +119,12 @@ function incrementStrNum(num: string) {
   return (parseInt(num) + 1).toString()
 }
 
+/**
+ * Increment the Semantic Version depending on the change type
+ * @param version A package version which follows the SemVer pattern
+ * @param semVerType The SemVer change type (MAJOR, MINOR or PATCH)
+ * @returns The newly incremented version
+ */
 function incrementSemVer(version: string, semVerType: SemVerType) {
   if (!isSemVer(version)) {
     throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`)
@@ -221,7 +224,7 @@ async function run(): Promise<void> {
 
     const context: Context = github.context;
 
-    // console.log(context)
+    console.log(context)
 
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);

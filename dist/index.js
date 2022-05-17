@@ -77,8 +77,7 @@ const reMajor = /#major|\[\s?major\s?\]/gi;
 const reMinor = /#minor|\[\s?minor\s?\]/gi;
 const rePatch = /#patch|\[\s?patch\s?\]/gi;
 const git = (0, simple_git_1.default)(options);
-git
-    .addConfig('user.name', 'github-actions')
+git.addConfig('user.name', 'github-actions')
     .addConfig('user.email', 'github-actions@github.com');
 /**
  * Retrieves the package version from the package.json file
@@ -149,6 +148,12 @@ function getChangeTypeFromString(str) {
 function incrementStrNum(num) {
     return (parseInt(num) + 1).toString();
 }
+/**
+ * Increment the Semantic Version depending on the change type
+ * @param version A package version which follows the SemVer pattern
+ * @param semVerType The SemVer change type (MAJOR, MINOR or PATCH)
+ * @returns The newly incremented version
+ */
 function incrementSemVer(version, semVerType) {
     if (!isSemVer(version)) {
         throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`);
@@ -238,7 +243,7 @@ function run() {
             const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
             const changelogPath = (0, path_1.join)(projectDir, changelogFilename);
             const context = github.context;
-            // console.log(context)
+            console.log(context);
             const eventName = context.eventName;
             const supportedEvents = Object.values(SupportedEvent);
             if (!supportedEvents.includes(eventName))
