@@ -212,7 +212,7 @@ function commitChanges(branchRef, msg, fileRef = ".") {
     });
 }
 function updateChangeLog(filePath, version, msg) {
-    const newEntry = `## [${version}] - ${getCurrentDate()}\n${msg}\n`;
+    const newEntry = `## [${version}] - ${getCurrentDate()}\n\n${msg}\n`;
     let content = readFile(filePath);
     // Find the location to insert
     const latestEntryIndex = content.search(reSemVerChangeLogEntry);
@@ -251,7 +251,7 @@ function run() {
                 // be outdated. Therefore fetch the pull request via the REST API
                 // to ensure we use the current title.
                 const title = yield fetchPRTitle(context.payload.pull_request, githubToken);
-                getChangeTypeFromString(title);
+                changeType = getChangeTypeFromString(title);
                 return;
             }
             if (eventName == SupportedEvent.PUSH) {
@@ -263,34 +263,16 @@ function run() {
                 jsonData.version = newVersion;
                 core.info(`Updating version ${version} to ${newVersion}`);
                 updatePackageVersion(packageJsonPath, jsonData);
+                if (addChangeLogEntry && (!changelogFilename || !changelogMsg))
+                    throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_FILENAME}' & '${Inputs.CHANGELOG_MSG}' must be specified`);
                 commitChanges(branchRef, "Updating package.json", packageJsonPath);
-                // Remove PR title by removing any line that doesn't start with an '*'
-                changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n");
-                updateChangeLog(changelogPath, newVersion, changelogMsg);
-                commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath);
-                // if(addChangeLogEntry && (!changelogFilename || !changelogMsg)) 
-                //   throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_MSG}' must be specified`)
-                // if (addChangeLogEntry) {
-                // } else {
-                //   core.warning(`No action taken. Set ${Inputs.ADD_CHANGELOG_ENTRY} to add a changelog entry`)
-                // }
+                if (addChangeLogEntry) {
+                    // Remove PR title by removing any line that doesn't start with an '*'
+                    changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n");
+                    updateChangeLog(changelogPath, newVersion, changelogMsg);
+                    commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath);
+                }
             }
-            // The rest of the functionality should only be done on PR approval
-            // so we can return in all other cases.
-            // if(eventName !== SupportedEvent.PRR) return;
-            // branchRef = context.payload.pull_request!.head.ref
-            // core.setOutput('branch_ref', branchRef)
-            // core.debug("Checking version follows SemVer format...")
-            // if (!isSemVer(version)) {
-            //   throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
-            // }
-            // let newVersion = incrementSemVer(version, changeType)
-            // core.setOutput('current_version', version)
-            // core.setOutput('new_version', newVersion)
-            // jsonData.version = newVersion;
-            // core.info(`Updating version ${version} to ${newVersion}`);
-            // updatePackageVersion(packageJsonPath, jsonData)
-            // commitChanges(branchRef, "Updating package.json", packageJsonPath)
         }
         catch (error) {
             if (error instanceof Error)
