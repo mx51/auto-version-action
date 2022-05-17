@@ -198,7 +198,7 @@ async function run(): Promise<void> {
   try {
     const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
     const projectDir = core.getInput(Inputs.PROJECT_DIR);
-    const changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
+    let changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
     const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
     let branchRef = core.getInput(Inputs.BRANCH);
     const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
@@ -244,6 +244,8 @@ async function run(): Promise<void> {
         throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_MSG}' must be specified`)
       
       if (addChangeLogEntry) {
+        // Remove PR title by removing any line that doesn't start with an '*'
+        changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n")
         updateChangeLog(changelogPath, version, changelogMsg)
         commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath)
       } else {
