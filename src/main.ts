@@ -119,9 +119,12 @@ function incrementSemVer(version: string, semVerType: SemVerType) {
   switch (semVerType) {
     case SemVerType.MAJOR:
       arr[0] = incrementStrNum(arr[0])
+      arr[1] = '0';
+      arr[2] = '0';
       break;
     case SemVerType.MINOR:
       arr[1] = incrementStrNum(arr[1])
+      arr[2] = '0';
       break;
     case SemVerType.PATCH:
       arr[2] = incrementStrNum(arr[2])
@@ -204,6 +207,9 @@ async function run(): Promise<void> {
     const changelogPath = join(projectDir, changelogFilename)
 
     const context: Context = github.context;
+
+    // console.log(context)
+
     const eventName = context.eventName;
     const supportedEvents = Object.values<string>(SupportedEvent);
 
