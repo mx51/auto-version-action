@@ -55,9 +55,15 @@ git
  * @returns The current package version and the jsonData object
  */
 function getPackageVersion(packageJsonPath: string): any {
+  core.debug("Getting version from package.json...")
+  
   const jsonStr = readFile(packageJsonPath)
   const jsonData = JSON.parse(jsonStr)
   const version = jsonData.version
+
+  core.debug("Checking version follows SemVer format...")
+  if (!isSemVer(version)) throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`)
+
   return { version, jsonData }
 }
 
@@ -102,7 +108,14 @@ function getChangeTypeFromString(str: string): SemVerType {
   if (reMinor.test(str)) return SemVerType.MINOR
   if (rePatch.test(str)) return SemVerType.PATCH
 
-  return SemVerType.UNKNOWN
+  throw new Error(`
+    '${str}' does not specify a Semantic Version type.
+
+    Select one of these change types: MAJOR, MINOR or PATCH
+    and prefix to string between square brackets '[]'
+
+    e.g. [MINOR] <string>
+  `);
 }
 
 function incrementStrNum(num: string) {
@@ -225,56 +238,73 @@ async function run(): Promise<void> {
       // to ensure we use the current title.
       const title = await fetchPRTitle(context.payload.pull_request, githubToken)
 
-      changeType = getChangeTypeFromString(title);
-
-      if (changeType == SemVerType.UNKNOWN) throw new Error(`
-        PR title, '${title}' does not specify a Semantic Version type.
-
-        Select one of these change types: MAJOR, MINOR or PATCH
-        and prefix to title after a '#' or between square brackets '[]'
-
-        e.g. #MAJOR <PR description> or [MINOR] <PR description>
-      `);
+      getChangeTypeFromString(title);
+      return
     }
 
-    const { version, jsonData } = getPackageVersion(packageJsonPath)
-
+    
     if (eventName == SupportedEvent.PUSH) {
-      if(addChangeLogEntry && (!changelogFilename || !changelogMsg)) 
-        throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_MSG}' must be specified`)
+      changeType = getChangeTypeFromString(changelogMsg);
       
-      if (addChangeLogEntry) {
-        // Remove PR title by removing any line that doesn't start with an '*'
-        changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n")
-        updateChangeLog(changelogPath, version, changelogMsg)
-        commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath)
-      } else {
-        core.warning(`No action taken. Set ${Inputs.ADD_CHANGELOG_ENTRY} to add a changelog entry`)
-      }
+      const { version, jsonData } = getPackageVersion(packageJsonPath)
+
+      let newVersion = incrementSemVer(version, changeType)
+
+      core.setOutput('current_version', version)
+      core.setOutput('new_version', newVersion)
+  
+      jsonData.version = newVersion;
+  
+      core.info(`Updating version ${version} to ${newVersion}`);
+  
+      updatePackageVersion(packageJsonPath, jsonData)
+      commitChanges(branchRef, "Updating package.json", packageJsonPath)
+
+      // Remove PR title by removing any line that doesn't start with an '*'
+      changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n")
+      updateChangeLog(changelogPath, newVersion, changelogMsg)
+      commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath)
+
+
+
+
+      // if(addChangeLogEntry && (!changelogFilename || !changelogMsg)) 
+      //   throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_MSG}' must be specified`)
+      
+
+
+      // if (addChangeLogEntry) {
+
+
+
+
+      // } else {
+      //   core.warning(`No action taken. Set ${Inputs.ADD_CHANGELOG_ENTRY} to add a changelog entry`)
+      // }
     }
 
     // The rest of the functionality should only be done on PR approval
     // so we can return in all other cases.
-    if(eventName !== SupportedEvent.PRR) return;
-    branchRef = context.payload.pull_request!.head.ref
-    core.setOutput('branch_ref', branchRef)
+    // if(eventName !== SupportedEvent.PRR) return;
+    // branchRef = context.payload.pull_request!.head.ref
+    // core.setOutput('branch_ref', branchRef)
     
-    core.debug("Checking version follows SemVer format...")
-    if (!isSemVer(version)) {
-      throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
-    }
+    // core.debug("Checking version follows SemVer format...")
+    // if (!isSemVer(version)) {
+    //   throw new Error(`Current version '${version}' does not follow Semantic Versioning pattern`)
+    // }
 
-    let newVersion = incrementSemVer(version, changeType)
+    // let newVersion = incrementSemVer(version, changeType)
     
-    core.setOutput('current_version', version)
-    core.setOutput('new_version', newVersion)
+    // core.setOutput('current_version', version)
+    // core.setOutput('new_version', newVersion)
 
-    jsonData.version = newVersion;
+    // jsonData.version = newVersion;
 
-    core.info(`Updating version ${version} to ${newVersion}`);
+    // core.info(`Updating version ${version} to ${newVersion}`);
 
-    updatePackageVersion(packageJsonPath, jsonData)
-    commitChanges(branchRef, "Updating package.json", packageJsonPath)
+    // updatePackageVersion(packageJsonPath, jsonData)
+    // commitChanges(branchRef, "Updating package.json", packageJsonPath)
 
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
