@@ -3,6 +3,7 @@ import * as github from '@actions/github'
 import { join } from 'path';
 import { writeFileSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
+import { GitHub } from "@actions/github/lib/utils";
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 
@@ -26,6 +27,9 @@ enum Inputs {
   ADD_CHANGELOG_ENTRY = 'add_changelog_entry',
   BRANCH = 'branch',
   CHANGELOG_FILENAME = 'changelog_filename',
+  MAJOR_LABEL = 'major_label',
+  MINOR_LABEL = 'minor_label',
+  PATCH_LABEL = 'patch_label',
 }
 
 const options: Partial<SimpleGitOptions> = {
@@ -45,6 +49,11 @@ const git: SimpleGit = simpleGit(options);
 git.addConfig('user.name', 'github-actions')
   .addConfig('user.email', 'github-actions@github.com')
 
+
+let pr: any;
+let majorLabel: string;
+let minorLabel: string;
+let patchLabel: string;
 /**
  * Retrieves the package version from the package.json file
  * 
@@ -113,6 +122,14 @@ function getChangeTypeFromString(str: string): SemVerType {
 
     e.g. [MINOR] <string>
   `);
+}
+
+function getChangeTypeFromLabels(labels: string[]): SemVerType {
+  if (labels.includes(majorLabel)) return SemVerType.MAJOR
+  if (labels.includes(minorLabel)) return SemVerType.MINOR
+  if (labels.includes(patchLabel)) return SemVerType.PATCH
+
+  return SemVerType.UNKNOWN
 }
 
 function incrementStrNum(num: string) {
@@ -210,6 +227,38 @@ function getCurrentDate() {
   return `${day}-${month}-${year}`
 }
 
+async function getPullRequestLabelNames(
+  octokit: InstanceType<typeof GitHub>
+): Promise<string[]> {
+  const owner = github.context.repo.owner;
+  const repo = github.context.repo.repo;
+  const commit_sha = github.context.sha;
+
+  const response =
+    await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+      owner,
+      repo,
+      commit_sha,
+    });
+
+  const pr = response.data.length > 0 && response.data[0];
+  return pr ? pr.labels.map((label: any) => label.name || "") : [];
+}
+
+async function getPRFromContext(octokit: InstanceType<typeof GitHub>, context: Context) {
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+  const commit_sha = context.sha;
+  const response =
+    await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+      owner,
+      repo,
+      commit_sha,
+    });
+  return response.data.length > 0 && response.data[0];
+}
+
+
 async function run(): Promise<void> {
   try {
     const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
@@ -218,11 +267,15 @@ async function run(): Promise<void> {
     const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
     let branchRef = core.getInput(Inputs.BRANCH);
     const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
+    majorLabel = core.getInput(Inputs.MAJOR_LABEL);
+    minorLabel = core.getInput(Inputs.MINOR_LABEL);
+    patchLabel = core.getInput(Inputs.PATCH_LABEL);
 
     const packageJsonPath = join(projectDir, 'package.json')
     const changelogPath = join(projectDir, changelogFilename)
 
     const context: Context = github.context;
+    const gitHubClient = github.getOctokit(githubToken);
 
     console.log(context)
 
@@ -233,21 +286,38 @@ async function run(): Promise<void> {
 
     let changeType: SemVerType = SemVerType.UNKNOWN;
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-      core.debug("Checking title format...")
+      core.debug("Checking PR labels...")
 
       // The pull request info on the context isn't kept up to date. When
       // the user updates the title and re-runs the workflow, it would
       // be outdated. Therefore fetch the pull request via the REST API
       // to ensure we use the current title.
-      const title = await fetchPRTitle(context.payload.pull_request, githubToken)
+      // const title = await fetchPRTitle(context.payload.pull_request, githubToken)
+      changeType = getChangeTypeFromLabels(context.payload.pull_request!.labels)
+      if (changeType === SemVerType.UNKNOWN) throw new Error(`
+        No expected labels found.
+    
+        Please add labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' to PR.
+      `);
 
-      changeType = getChangeTypeFromString(title);
       return
     }
 
 
     if (eventName == SupportedEvent.PUSH) {
-      changeType = getChangeTypeFromString(changelogMsg);
+      pr = getPRFromContext(gitHubClient, context)
+
+      console.log({ pr })
+
+      if (!pr) return;
+
+      const labels = pr.labels.map((label: any) => label.name || "")
+      console.log({ labels })
+
+      changeType = getChangeTypeFromLabels(labels)
+      if (changeType === SemVerType.UNKNOWN) throw new Error(`
+        PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.
+      `);
 
       const { version, jsonData } = getPackageVersion(packageJsonPath)
 

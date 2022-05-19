@@ -64,6 +64,9 @@ var Inputs;
     Inputs["ADD_CHANGELOG_ENTRY"] = "add_changelog_entry";
     Inputs["BRANCH"] = "branch";
     Inputs["CHANGELOG_FILENAME"] = "changelog_filename";
+    Inputs["MAJOR_LABEL"] = "major_label";
+    Inputs["MINOR_LABEL"] = "minor_label";
+    Inputs["PATCH_LABEL"] = "patch_label";
 })(Inputs || (Inputs = {}));
 const options = {
     baseDir: process.cwd(),
@@ -79,6 +82,10 @@ const rePatch = /#patch|\[\s?patch\s?\]/gi;
 const git = (0, simple_git_1.default)(options);
 git.addConfig('user.name', 'github-actions')
     .addConfig('user.email', 'github-actions@github.com');
+let pr;
+let majorLabel;
+let minorLabel;
+let patchLabel;
 /**
  * Retrieves the package version from the package.json file
  *
@@ -144,6 +151,15 @@ function getChangeTypeFromString(str) {
 
     e.g. [MINOR] <string>
   `);
+}
+function getChangeTypeFromLabels(labels) {
+    if (labels.includes(majorLabel))
+        return SemVerType.MAJOR;
+    if (labels.includes(minorLabel))
+        return SemVerType.MINOR;
+    if (labels.includes(patchLabel))
+        return SemVerType.PATCH;
+    return SemVerType.UNKNOWN;
 }
 function incrementStrNum(num) {
     return (parseInt(num) + 1).toString();
@@ -231,6 +247,33 @@ function getCurrentDate() {
     const day = dt.getDate().toString().padStart(2, "0");
     return `${day}-${month}-${year}`;
 }
+function getPullRequestLabelNames(octokit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = github.context.repo.owner;
+        const repo = github.context.repo.repo;
+        const commit_sha = github.context.sha;
+        const response = yield octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+            owner,
+            repo,
+            commit_sha,
+        });
+        const pr = response.data.length > 0 && response.data[0];
+        return pr ? pr.labels.map((label) => label.name || "") : [];
+    });
+}
+function getPRFromContext(octokit, context) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = context.repo.owner;
+        const repo = context.repo.repo;
+        const commit_sha = context.sha;
+        const response = yield octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+            owner,
+            repo,
+            commit_sha,
+        });
+        return response.data.length > 0 && response.data[0];
+    });
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -240,9 +283,13 @@ function run() {
             const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
             let branchRef = core.getInput(Inputs.BRANCH);
             const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
+            majorLabel = core.getInput(Inputs.MAJOR_LABEL);
+            minorLabel = core.getInput(Inputs.MINOR_LABEL);
+            patchLabel = core.getInput(Inputs.PATCH_LABEL);
             const packageJsonPath = (0, path_1.join)(projectDir, 'package.json');
             const changelogPath = (0, path_1.join)(projectDir, changelogFilename);
             const context = github.context;
+            const gitHubClient = github.getOctokit(githubToken);
             console.log(context);
             const eventName = context.eventName;
             const supportedEvents = Object.values(SupportedEvent);
@@ -250,17 +297,33 @@ function run() {
                 throw new Error(`This Github Action does not support '${eventName}' events`);
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-                core.debug("Checking title format...");
+                core.debug("Checking PR labels...");
                 // The pull request info on the context isn't kept up to date. When
                 // the user updates the title and re-runs the workflow, it would
                 // be outdated. Therefore fetch the pull request via the REST API
                 // to ensure we use the current title.
-                const title = yield fetchPRTitle(context.payload.pull_request, githubToken);
-                changeType = getChangeTypeFromString(title);
+                // const title = await fetchPRTitle(context.payload.pull_request, githubToken)
+                changeType = getChangeTypeFromLabels(context.payload.pull_request.labels);
+                if (changeType === SemVerType.UNKNOWN)
+                    throw new Error(`
+        No expected labels found.
+    
+        Please add labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' to PR.
+      `);
                 return;
             }
             if (eventName == SupportedEvent.PUSH) {
-                changeType = getChangeTypeFromString(changelogMsg);
+                pr = getPRFromContext(gitHubClient, context);
+                console.log({ pr });
+                if (!pr)
+                    return;
+                const labels = pr.labels.map((label) => label.name || "");
+                console.log({ labels });
+                changeType = getChangeTypeFromLabels(labels);
+                if (changeType === SemVerType.UNKNOWN)
+                    throw new Error(`
+        PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.
+      `);
                 const { version, jsonData } = getPackageVersion(packageJsonPath);
                 let newVersion = incrementSemVer(version, changeType);
                 core.setOutput('current_version', version);
