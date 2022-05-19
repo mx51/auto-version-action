@@ -306,7 +306,7 @@ async function run(): Promise<void> {
 
 
     if (eventName == SupportedEvent.PUSH) {
-      pr = getPRFromContext(gitHubClient, context)
+      pr = await getPRFromContext(gitHubClient, context)
 
       console.log({ pr })
 

@@ -314,7 +314,7 @@ function run() {
                 return;
             }
             if (eventName == SupportedEvent.PUSH) {
-                pr = getPRFromContext(gitHubClient, context);
+                pr = yield getPRFromContext(gitHubClient, context);
                 console.log({ pr });
                 if (!pr)
                     return;
