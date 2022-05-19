@@ -318,9 +318,7 @@ function run() {
                 console.log({ pr });
                 if (!pr)
                     return;
-                const labels = pr.labels.map((label) => label.name || "");
-                console.log({ labels });
-                changeType = getChangeTypeFromLabels(labels);
+                changeType = getChangeTypeFromLabels(pr.labels);
                 if (changeType === SemVerType.UNKNOWN)
                     throw new Error(`
         PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.

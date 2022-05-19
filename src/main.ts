@@ -312,10 +312,7 @@ async function run(): Promise<void> {
 
       if (!pr) return;
 
-      const labels = pr.labels.map((label: any) => label.name || "")
-      console.log({ labels })
-
-      changeType = getChangeTypeFromLabels(labels)
+      changeType = getChangeTypeFromLabels(pr.labels)
       if (changeType === SemVerType.UNKNOWN) throw new Error(`
         PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.
       `);
