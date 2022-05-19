@@ -124,7 +124,8 @@ function getChangeTypeFromString(str: string): SemVerType {
   `);
 }
 
-function getChangeTypeFromLabels(labels: string[]): SemVerType {
+function getChangeTypeFromLabels(labelsArr: any[]): SemVerType {
+  const labels = labelsArr.map((label: any) => label.name || "")
   if (labels.includes(majorLabel)) return SemVerType.MAJOR
   if (labels.includes(minorLabel)) return SemVerType.MINOR
   if (labels.includes(patchLabel)) return SemVerType.PATCH

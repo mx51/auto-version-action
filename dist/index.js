@@ -152,7 +152,8 @@ function getChangeTypeFromString(str) {
     e.g. [MINOR] <string>
   `);
 }
-function getChangeTypeFromLabels(labels) {
+function getChangeTypeFromLabels(labelsArr) {
+    const labels = labelsArr.map((label) => label.name || "");
     if (labels.includes(majorLabel))
         return SemVerType.MAJOR;
     if (labels.includes(minorLabel))
