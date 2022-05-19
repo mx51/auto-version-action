@@ -25,15 +25,15 @@ inputs:
     required: false
     description: 'input description here'
   major_label:
-    required: true
+    required: false
     description: 'A label associated with a major change',
     default: 'pr:major'
   minor_label:
-    required: true
+    required: false
     description: 'A label associated with a minor change',
     default: 'pr:minor'
   patch_label:
-    required: true
+    required: false
     description: 'A label associated with a patch change',
     default: 'pr:patch' 
 
