@@ -303,6 +303,7 @@ async function run(): Promise<void> {
 
     if (eventName == SupportedEvent.PRR && addInstructions) {
       core.debug("Adding instructions as empty commit...")
+      branchRef = context.payload.pull_request!.head.ref
 
       commitChanges(branchRef, "<!-- This is an instruction -->", undefined, {'--allow-empty': null})
     }
