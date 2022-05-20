@@ -67,6 +67,7 @@ var Inputs;
     Inputs["MAJOR_LABEL"] = "major_label";
     Inputs["MINOR_LABEL"] = "minor_label";
     Inputs["PATCH_LABEL"] = "patch_label";
+    Inputs["ADD_INSTRUCTIONS"] = "add_instructions";
 })(Inputs || (Inputs = {}));
 const options = {
     baseDir: process.cwd(),
@@ -224,12 +225,12 @@ function fetchPRTitle(pr, githubToken) {
  * @param msg The commit message
  * @param fileRef [Optional] Reference to file to commit. References all changed files by default
  */
-function commitChanges(branchRef, msg, fileRef = ".") {
+function commitChanges(branchRef, msg, fileRef = ".", options = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug("Commit & push changes");
         yield git
             .add(fileRef)
-            .commit(msg)
+            .commit(msg, options)
             .push('origin', `HEAD:${branchRef}`, ["--force"]);
     });
 }
@@ -280,10 +281,11 @@ function run() {
         try {
             const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
             const projectDir = core.getInput(Inputs.PROJECT_DIR);
-            let changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
             const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
-            let branchRef = core.getInput(Inputs.BRANCH);
             const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
+            const addInstructions = core.getInput(Inputs.ADD_INSTRUCTIONS);
+            let changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
+            let branchRef = core.getInput(Inputs.BRANCH);
             majorLabel = core.getInput(Inputs.MAJOR_LABEL);
             minorLabel = core.getInput(Inputs.MINOR_LABEL);
             patchLabel = core.getInput(Inputs.PATCH_LABEL);
@@ -299,11 +301,6 @@ function run() {
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
                 core.debug("Checking PR labels...");
-                // The pull request info on the context isn't kept up to date. When
-                // the user updates the title and re-runs the workflow, it would
-                // be outdated. Therefore fetch the pull request via the REST API
-                // to ensure we use the current title.
-                // const title = await fetchPRTitle(context.payload.pull_request, githubToken)
                 changeType = getChangeTypeFromLabels(context.payload.pull_request.labels);
                 if (changeType === SemVerType.UNKNOWN)
                     throw new Error(`
@@ -311,24 +308,22 @@ function run() {
     
         Please add labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' to PR.
       `);
-                return;
+            }
+            if (eventName == SupportedEvent.PRR && addInstructions) {
+                core.debug("Adding instructions as empty commit...");
+                commitChanges(branchRef, "<!-- This is an instruction -->", undefined, { '--allow-empty': null });
             }
             if (eventName == SupportedEvent.PUSH) {
                 pr = yield getPRFromContext(gitHubClient, context);
-                console.log({ pr });
                 if (!pr)
                     return;
                 changeType = getChangeTypeFromLabels(pr.labels);
                 if (changeType === SemVerType.UNKNOWN)
-                    throw new Error(`
-        PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.
-      `);
+                    throw new Error(`PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' no found.`);
                 const { version, jsonData } = getPackageVersion(packageJsonPath);
                 let newVersion = incrementSemVer(version, changeType);
-                core.setOutput('current_version', version);
-                core.setOutput('new_version', newVersion);
-                jsonData.version = newVersion;
                 core.info(`Updating version ${version} to ${newVersion}`);
+                jsonData.version = newVersion;
                 updatePackageVersion(packageJsonPath, jsonData);
                 if (addChangeLogEntry && (!changelogFilename || !changelogMsg))
                     throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_FILENAME}' & '${Inputs.CHANGELOG_MSG}' must be specified`);

@@ -4,7 +4,7 @@ import { join } from 'path';
 import { writeFileSync, readFileSync } from 'fs';
 import { Context } from '@actions/github/lib/context';
 import { GitHub } from "@actions/github/lib/utils";
-import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git';
+import simpleGit, { SimpleGit, SimpleGitOptions, Options } from 'simple-git';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 
 enum SemVerType {
@@ -30,6 +30,7 @@ enum Inputs {
   MAJOR_LABEL = 'major_label',
   MINOR_LABEL = 'minor_label',
   PATCH_LABEL = 'patch_label',
+  ADD_INSTRUCTIONS = 'add_instructions'
 }
 
 const options: Partial<SimpleGitOptions> = {
@@ -200,12 +201,12 @@ async function fetchPRTitle(pr: WebhookPayload["pull_request"], githubToken: str
  * @param msg The commit message
  * @param fileRef [Optional] Reference to file to commit. References all changed files by default
  */
-async function commitChanges(branchRef: string, msg: string, fileRef: string = ".") {
+async function commitChanges(branchRef: string, msg: string, fileRef: string | undefined = ".", options: any | undefined = undefined) {
   core.debug("Commit & push changes")
 
   await git
     .add(fileRef)
-    .commit(msg)
+    .commit(msg,options)
     .push('origin', `HEAD:${branchRef}`, ["--force"]);
 }
 
@@ -264,10 +265,13 @@ async function run(): Promise<void> {
   try {
     const githubToken = core.getInput(Inputs.GITHUB_TOKEN);
     const projectDir = core.getInput(Inputs.PROJECT_DIR);
-    let changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
     const addChangeLogEntry = core.getInput(Inputs.ADD_CHANGELOG_ENTRY);
-    let branchRef = core.getInput(Inputs.BRANCH);
     const changelogFilename = core.getInput(Inputs.CHANGELOG_FILENAME);
+    const addInstructions = core.getInput(Inputs.ADD_INSTRUCTIONS);
+
+    let changelogMsg = core.getInput(Inputs.CHANGELOG_MSG);
+    let branchRef = core.getInput(Inputs.BRANCH);
+
     majorLabel = core.getInput(Inputs.MAJOR_LABEL);
     minorLabel = core.getInput(Inputs.MINOR_LABEL);
     patchLabel = core.getInput(Inputs.PATCH_LABEL);
@@ -289,45 +293,35 @@ async function run(): Promise<void> {
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
       core.debug("Checking PR labels...")
 
-      // The pull request info on the context isn't kept up to date. When
-      // the user updates the title and re-runs the workflow, it would
-      // be outdated. Therefore fetch the pull request via the REST API
-      // to ensure we use the current title.
-      // const title = await fetchPRTitle(context.payload.pull_request, githubToken)
       changeType = getChangeTypeFromLabels(context.payload.pull_request!.labels)
       if (changeType === SemVerType.UNKNOWN) throw new Error(`
         No expected labels found.
     
         Please add labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' to PR.
       `);
+    }
 
-      return
+    if (eventName == SupportedEvent.PRR && addInstructions) {
+      core.debug("Adding instructions as empty commit...")
+
+      commitChanges(branchRef, "<!-- This is an instruction -->", undefined, {'--allow-empty': null})
     }
 
 
     if (eventName == SupportedEvent.PUSH) {
       pr = await getPRFromContext(gitHubClient, context)
 
-      console.log({ pr })
-
       if (!pr) return;
 
       changeType = getChangeTypeFromLabels(pr.labels)
-      if (changeType === SemVerType.UNKNOWN) throw new Error(`
-        PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' were no found.
-      `);
+      if (changeType === SemVerType.UNKNOWN) throw new Error(`PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' no found.`);
 
       const { version, jsonData } = getPackageVersion(packageJsonPath)
 
       let newVersion = incrementSemVer(version, changeType)
 
-      core.setOutput('current_version', version)
-      core.setOutput('new_version', newVersion)
-
-      jsonData.version = newVersion;
-
       core.info(`Updating version ${version} to ${newVersion}`);
-
+      jsonData.version = newVersion;
       updatePackageVersion(packageJsonPath, jsonData)
 
       if (addChangeLogEntry && (!changelogFilename || !changelogMsg))

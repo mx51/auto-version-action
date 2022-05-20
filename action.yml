@@ -36,6 +36,10 @@ inputs:
     required: false
     description: 'A label associated with a patch change'
     default: 'pr:patch' 
+  add_instructions:
+    required: false
+    description: '...'
+    default: false
 
 
 runs:
