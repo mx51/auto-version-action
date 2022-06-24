@@ -63,13 +63,13 @@ let patchLabel: string
  * @returns The current package version and the jsonData object
  */
 function getPackageVersion(packageJsonPath: string): any {
-  core.debug('Getting version from package.json...')
+  console.log('Getting version from package.json...')
 
   const jsonStr = readFile(packageJsonPath)
   const jsonData = JSON.parse(jsonStr)
   const version = jsonData.version
 
-  core.debug('Checking version follows SemVer format...')
+  console.log('Checking version follows SemVer format...')
   if (!isSemVer(version))
     throw new Error(
       `Version '${version}' does not follow Semantic Versioning pattern`
@@ -219,17 +219,19 @@ async function commitChanges(
   fileRef: string | undefined = '.',
   options: any | undefined = undefined
 ) {
-  core.debug('Commit & push changes')
+  console.log('Commit & push changes')
+  // console.log('Commit & push changes')
 
   await git
-    .addConfig('user.name', 'abomadev')
-    .addConfig('user.email', 'aboma.kelly@gmail.com')
+    .addConfig('user.name', 'github-actions')
+    .addConfig('user.email', 'github-actions@github.com')
     .add(fileRef)
     .commit(msg, options)
     .push('origin', `HEAD:${branchRef}`, ['--force'])
 }
 
 function updateChangeLog(filePath: string, version: string, msg: string) {
+  console.log("Updating changelog")
   const newEntry = `## [${version}] - ${getCurrentDate()}\n\n${msg}\n`
 
   let content = readFile(filePath)
@@ -321,7 +323,7 @@ async function run(): Promise<void> {
 
     let changeType: SemVerType = SemVerType.UNKNOWN
     if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-      core.debug('Checking PR labels...')
+      console.log('Checking PR labels...')
 
       changeType = getChangeTypeFromLabels(context.payload.pull_request!.labels)
       if (changeType === SemVerType.UNKNOWN)
@@ -333,7 +335,7 @@ async function run(): Promise<void> {
     }
 
     if (eventName == SupportedEvent.PRR && addInstructions) {
-      core.debug('Adding instructions as empty commit...')
+      console.log('Adding instructions as empty commit...')
       branchRef = context.payload.pull_request!.head.ref
 
       commitChanges(branchRef, '<!-- This is an instruction -->', undefined, {
@@ -342,6 +344,7 @@ async function run(): Promise<void> {
     }
 
     if (eventName == SupportedEvent.PUSH) {
+      console.log("")
       pr = await getPRFromContext(gitHubClient, context)
 
       if (!pr) return

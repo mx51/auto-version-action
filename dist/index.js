@@ -94,11 +94,11 @@ let patchLabel;
  * @returns The current package version and the jsonData object
  */
 function getPackageVersion(packageJsonPath) {
-    core.debug('Getting version from package.json...');
+    console.log('Getting version from package.json...');
     const jsonStr = readFile(packageJsonPath);
     const jsonData = JSON.parse(jsonStr);
     const version = jsonData.version;
-    core.debug('Checking version follows SemVer format...');
+    console.log('Checking version follows SemVer format...');
     if (!isSemVer(version))
         throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`);
     return { version, jsonData };
@@ -227,16 +227,18 @@ function fetchPRTitle(pr, githubToken) {
  */
 function commitChanges(branchRef, msg, fileRef = '.', options = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.debug('Commit & push changes');
+        console.log('Commit & push changes');
+        // console.log('Commit & push changes')
         yield git
-            .addConfig('user.name', 'abomadev')
-            .addConfig('user.email', 'aboma.kelly@gmail.com')
+            .addConfig('user.name', 'github-actions')
+            .addConfig('user.email', 'github-actions@github.com')
             .add(fileRef)
             .commit(msg, options)
             .push('origin', `HEAD:${branchRef}`, ['--force']);
     });
 }
 function updateChangeLog(filePath, version, msg) {
+    console.log("Updating changelog");
     const newEntry = `## [${version}] - ${getCurrentDate()}\n\n${msg}\n`;
     let content = readFile(filePath);
     // Find the location to insert
@@ -304,7 +306,7 @@ function run() {
                 throw new Error(`This Github Action does not support '${eventName}' events`);
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-                core.debug('Checking PR labels...');
+                console.log('Checking PR labels...');
                 changeType = getChangeTypeFromLabels(context.payload.pull_request.labels);
                 if (changeType === SemVerType.UNKNOWN)
                     throw new Error(`
@@ -314,13 +316,14 @@ function run() {
       `);
             }
             if (eventName == SupportedEvent.PRR && addInstructions) {
-                core.debug('Adding instructions as empty commit...');
+                console.log('Adding instructions as empty commit...');
                 branchRef = context.payload.pull_request.head.ref;
                 commitChanges(branchRef, '<!-- This is an instruction -->', undefined, {
                     '--allow-empty': null
                 });
             }
             if (eventName == SupportedEvent.PUSH) {
+                console.log("");
                 pr = yield getPRFromContext(gitHubClient, context);
                 if (!pr)
                     return;
