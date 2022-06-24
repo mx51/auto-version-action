@@ -229,8 +229,8 @@ function commitChanges(branchRef, msg, fileRef = '.', options = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug('Commit & push changes');
         yield git
-            .addConfig('user.name', 'github-actions')
-            .addConfig('user.email', 'github-actions@github.com')
+            .addConfig('user.name', 'abomadev')
+            .addConfig('user.email', 'aboma.kelly@gmail.com')
             .add(fileRef)
             .commit(msg, options)
             .push('origin', `HEAD:${branchRef}`, ['--force']);

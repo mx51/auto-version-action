@@ -222,8 +222,8 @@ async function commitChanges(
   core.debug('Commit & push changes')
 
   await git
-    .addConfig('user.name', 'github-actions')
-    .addConfig('user.email', 'github-actions@github.com')
+    .addConfig('user.name', 'abomadev')
+    .addConfig('user.email', 'aboma.kelly@gmail.com')
     .add(fileRef)
     .commit(msg, options)
     .push('origin', `HEAD:${branchRef}`, ['--force'])
