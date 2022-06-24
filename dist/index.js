@@ -72,7 +72,7 @@ var Inputs;
 const options = {
     baseDir: process.cwd(),
     binary: 'git',
-    maxConcurrentProcesses: 1,
+    maxConcurrentProcesses: 1
 };
 const reSemVerFormat = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/;
 const reSemVerFormatBasic = /^[0-9]+.[0-9]+.[0-9]+/;
@@ -81,8 +81,8 @@ const reMajor = /#major|\[\s?major\s?\]/gi;
 const reMinor = /#minor|\[\s?minor\s?\]/gi;
 const rePatch = /#patch|\[\s?patch\s?\]/gi;
 const git = (0, simple_git_1.default)(options);
-git.addConfig('user.name', 'github-actions')
-    .addConfig('user.email', 'github-actions@github.com');
+// git.addConfig('user.name', 'github-actions')
+//   .addConfig('user.email', 'github-actions@github.com')
 let pr;
 let majorLabel;
 let minorLabel;
@@ -94,11 +94,11 @@ let patchLabel;
  * @returns The current package version and the jsonData object
  */
 function getPackageVersion(packageJsonPath) {
-    core.debug("Getting version from package.json...");
+    core.debug('Getting version from package.json...');
     const jsonStr = readFile(packageJsonPath);
     const jsonData = JSON.parse(jsonStr);
     const version = jsonData.version;
-    core.debug("Checking version follows SemVer format...");
+    core.debug('Checking version follows SemVer format...');
     if (!isSemVer(version))
         throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`);
     return { version, jsonData };
@@ -120,7 +120,7 @@ function writeToFile(filePath, content) {
         throw new Error(`Failed to update file: ${filePath}`);
     }
 }
-function readFile(filePath, encoding = "utf8") {
+function readFile(filePath, encoding = 'utf8') {
     try {
         return (0, fs_1.readFileSync)(filePath, encoding);
     }
@@ -154,7 +154,7 @@ function getChangeTypeFromString(str) {
   `);
 }
 function getChangeTypeFromLabels(labelsArr) {
-    const labels = labelsArr.map((label) => label.name || "");
+    const labels = labelsArr.map((label) => label.name || '');
     if (labels.includes(majorLabel))
         return SemVerType.MAJOR;
     if (labels.includes(minorLabel))
@@ -177,7 +177,7 @@ function incrementSemVer(version, semVerType) {
         throw new Error(`Version '${version}' does not follow Semantic Versioning pattern`);
     }
     let numberPart = reSemVerFormatBasic.exec(version);
-    let arr = numberPart[0].split(".");
+    let arr = numberPart[0].split('.');
     switch (semVerType) {
         case SemVerType.MAJOR:
             arr[0] = incrementStrNum(arr[0]);
@@ -192,9 +192,9 @@ function incrementSemVer(version, semVerType) {
             arr[2] = incrementStrNum(arr[2]);
             break;
         default:
-            throw new Error("ERROR");
+            throw new Error('ERROR');
     }
-    return version.replace(numberPart[0], arr.join("."));
+    return version.replace(numberPart[0], arr.join('.'));
 }
 /**
  * Fetch the PR title via the GitHub Rest API
@@ -206,7 +206,7 @@ function incrementSemVer(version, semVerType) {
 function fetchPRTitle(pr, githubToken) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!pr)
-            throw new Error("pull_request object is undefined");
+            throw new Error('pull_request object is undefined');
         const owner = pr.base.user.login;
         const repo = pr.base.repo.name;
         const client = github.getOctokit(githubToken);
@@ -225,13 +225,15 @@ function fetchPRTitle(pr, githubToken) {
  * @param msg The commit message
  * @param fileRef [Optional] Reference to file to commit. References all changed files by default
  */
-function commitChanges(branchRef, msg, fileRef = ".", options = undefined) {
+function commitChanges(branchRef, msg, fileRef = '.', options = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.debug("Commit & push changes");
+        core.debug('Commit & push changes');
         yield git
+            .addConfig('user.name', 'github-actions')
+            .addConfig('user.email', 'github-actions@github.com')
             .add(fileRef)
             .commit(msg, options)
-            .push('origin', `HEAD:${branchRef}`, ["--force"]);
+            .push('origin', `HEAD:${branchRef}`, ['--force']);
     });
 }
 function updateChangeLog(filePath, version, msg) {
@@ -239,14 +241,16 @@ function updateChangeLog(filePath, version, msg) {
     let content = readFile(filePath);
     // Find the location to insert
     const latestEntryIndex = content.search(reSemVerChangeLogEntry);
-    let newContent = latestEntryIndex >= 0 ? `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}` : `${content}\n${newEntry}`;
+    let newContent = latestEntryIndex >= 0
+        ? `${content.substring(0, latestEntryIndex)}${newEntry}\n${content.substring(latestEntryIndex)}`
+        : `${content}\n${newEntry}`;
     writeToFile(filePath, newContent);
 }
 function getCurrentDate() {
     const dt = new Date();
     const year = dt.getFullYear();
-    const month = (dt.getMonth() + 1).toString().padStart(2, "0");
-    const day = dt.getDate().toString().padStart(2, "0");
+    const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+    const day = dt.getDate().toString().padStart(2, '0');
     return `${day}-${month}-${year}`;
 }
 function getPullRequestLabelNames(octokit) {
@@ -257,10 +261,10 @@ function getPullRequestLabelNames(octokit) {
         const response = yield octokit.rest.repos.listPullRequestsAssociatedWithCommit({
             owner,
             repo,
-            commit_sha,
+            commit_sha
         });
         const pr = response.data.length > 0 && response.data[0];
-        return pr ? pr.labels.map((label) => label.name || "") : [];
+        return pr ? pr.labels.map((label) => label.name || '') : [];
     });
 }
 function getPRFromContext(octokit, context) {
@@ -271,7 +275,7 @@ function getPRFromContext(octokit, context) {
         const response = yield octokit.rest.repos.listPullRequestsAssociatedWithCommit({
             owner,
             repo,
-            commit_sha,
+            commit_sha
         });
         return response.data.length > 0 && response.data[0];
     });
@@ -300,7 +304,7 @@ function run() {
                 throw new Error(`This Github Action does not support '${eventName}' events`);
             let changeType = SemVerType.UNKNOWN;
             if (eventName == SupportedEvent.PR || eventName == SupportedEvent.PRR) {
-                core.debug("Checking PR labels...");
+                core.debug('Checking PR labels...');
                 changeType = getChangeTypeFromLabels(context.payload.pull_request.labels);
                 if (changeType === SemVerType.UNKNOWN)
                     throw new Error(`
@@ -310,9 +314,11 @@ function run() {
       `);
             }
             if (eventName == SupportedEvent.PRR && addInstructions) {
-                core.debug("Adding instructions as empty commit...");
+                core.debug('Adding instructions as empty commit...');
                 branchRef = context.payload.pull_request.head.ref;
-                commitChanges(branchRef, "<!-- This is an instruction -->", undefined, { '--allow-empty': null });
+                commitChanges(branchRef, '<!-- This is an instruction -->', undefined, {
+                    '--allow-empty': null
+                });
             }
             if (eventName == SupportedEvent.PUSH) {
                 pr = yield getPRFromContext(gitHubClient, context);
@@ -328,10 +334,13 @@ function run() {
                 updatePackageVersion(packageJsonPath, jsonData);
                 if (addChangeLogEntry && (!changelogFilename || !changelogMsg))
                     throw new Error(`To add a Changelog entry, '${Inputs.CHANGELOG_FILENAME}' & '${Inputs.CHANGELOG_MSG}' must be specified`);
-                commitChanges(branchRef, "Updating package.json", packageJsonPath);
+                commitChanges(branchRef, 'Updating package.json', packageJsonPath);
                 if (addChangeLogEntry) {
                     // Remove PR title by removing any line that doesn't start with an '*'
-                    changelogMsg = changelogMsg.split("\n\n").filter(line => line[0] === "*").join("\n\n");
+                    changelogMsg = changelogMsg
+                        .split('\n\n')
+                        .filter(line => line[0] === '*')
+                        .join('\n\n');
                     updateChangeLog(changelogPath, newVersion, changelogMsg);
                     commitChanges(branchRef, `Updating ${changelogFilename}`, changelogPath);
                 }
