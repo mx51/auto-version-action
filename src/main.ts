@@ -311,7 +311,8 @@ async function run(): Promise<void> {
     const context: Context = github.context
     const gitHubClient = github.getOctokit(githubToken)
 
-    console.log(context)
+    // console.log(context)
+    console.log("--- [1] ---")
 
     const eventName = context.eventName
     const supportedEvents = Object.values<string>(SupportedEvent)
@@ -334,6 +335,8 @@ async function run(): Promise<void> {
       `)
     }
 
+    console.log("--- [2] ---")
+
     if (eventName == SupportedEvent.PRR && addInstructions) {
       console.log('Adding instructions as empty commit...')
       branchRef = context.payload.pull_request!.head.ref
@@ -343,11 +346,16 @@ async function run(): Promise<void> {
       })
     }
 
+    console.log("--- [3] ---")
+
     if (eventName == SupportedEvent.PUSH) {
-      console.log("")
+      console.log("--- [4] ---")
+
       pr = await getPRFromContext(gitHubClient, context)
 
       if (!pr) return
+
+      console.log("--- [6] ---")
 
       changeType = getChangeTypeFromLabels(pr.labels)
       if (changeType === SemVerType.UNKNOWN)
@@ -355,20 +363,26 @@ async function run(): Promise<void> {
           `PR labels '${majorLabel}', '${minorLabel}' or '${patchLabel}' no found.`
         )
 
+      console.log("--- [7] ---")
+
       const {version, jsonData} = getPackageVersion(packageJsonPath)
 
       let newVersion = incrementSemVer(version, changeType)
+      console.log("--- [8] ---")
 
       core.info(`Updating version ${version} to ${newVersion}`)
       jsonData.version = newVersion
       updatePackageVersion(packageJsonPath, jsonData)
+      console.log("--- [9] ---")
 
       if (addChangeLogEntry && (!changelogFilename || !changelogMsg))
         throw new Error(
           `To add a Changelog entry, '${Inputs.CHANGELOG_FILENAME}' & '${Inputs.CHANGELOG_MSG}' must be specified`
         )
+      console.log("--- [10] ---")
 
       commitChanges(branchRef, 'Updating package.json', packageJsonPath)
+      console.log("--- [11] ---")
 
       if (addChangeLogEntry) {
         // Remove PR title by removing any line that doesn't start with an '*'
